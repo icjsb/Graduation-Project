@@ -1,0 +1,59 @@
+C51 COMPILER V9.52.0.0   DELAY                                                             02/21/2012 17:16:14 PAGE 1   
+
+
+C51 COMPILER V9.52.0.0, COMPILATION OF MODULE DELAY
+OBJECT MODULE PLACED IN .\Objects\delay.obj
+COMPILER INVOKED BY: C:\Keil_v5\C51\BIN\C51.EXE delay\delay.c LARGE BROWSE INCDIR(.\blueteeth;.\delay;.\main;.\mp3;.\ser
+                    -ial;.\voice;.\key;.\ds3231) DEBUG OBJECTEXTEND PRINT(.\Listings\delay.lst) OBJECT(.\Objects\delay.obj)
+
+line level    source
+
+   1          #include "delay.h"
+   2          
+   3          void delay10ms(void)   //Îó²î -0.000000000001us
+   4          {
+   5   1          unsigned char a,b,c;
+   6   1          for(c=5;c>0;c--)
+   7   1              for(b=89;b>0;b--)
+   8   1                  for(a=247;a>0;a--);
+   9   1          _nop_();  //if Keil,require use intrins.h
+  10   1      }
+  11          void delay50ms(void)   //Îó²î -0.000000000006us
+  12          {
+  13   1          unsigned char a,b,c;
+  14   1          for(c=254;c>0;c--)
+  15   1              for(b=229;b>0;b--)
+  16   1                  for(a=8;a>0;a--);
+  17   1          _nop_();  //if Keil,require use intrins.h
+  18   1      }
+  19          void delay200ms(void)   //Îó²î -0.000000000025us
+  20          {
+  21   1          unsigned char a,b,c,n;
+  22   1          for(c=187;c>0;c--)
+  23   1              for(b=217;b>0;b--)
+  24   1                  for(a=53;a>0;a--);
+  25   1          for(n=2;n>0;n--);
+  26   1      }
+  27          void delay800ms(void)   //Îó²î -0.0000000001us
+  28          {
+  29   1          unsigned char a,b,c,n;
+  30   1          for(c=249;c>0;c--)
+  31   1              for(b=220;b>0;b--)
+  32   1                  for(a=160;a>0;a--);
+  33   1          for(n=14;n>0;n--);
+  34   1          _nop_();  //if Keil,require use intrins.h
+  35   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =     63    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

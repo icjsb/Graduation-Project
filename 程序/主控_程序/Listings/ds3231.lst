@@ -1,0 +1,222 @@
+C51 COMPILER V9.52.0.0   DS3231                                                            02/21/2012 17:16:15 PAGE 1   
+
+
+C51 COMPILER V9.52.0.0, COMPILATION OF MODULE DS3231
+OBJECT MODULE PLACED IN .\Objects\ds3231.obj
+COMPILER INVOKED BY: C:\Keil_v5\C51\BIN\C51.EXE ds3231\ds3231.c LARGE BROWSE INCDIR(.\blueteeth;.\delay;.\main;.\mp3;.\s
+                    -erial;.\voice;.\key;.\ds3231) DEBUG OBJECTEXTEND PRINT(.\Listings\ds3231.lst) OBJECT(.\Objects\ds3231.obj)
+
+line level    source
+
+   1          #include"ds3231.h"
+   2          bit ack;        //应答标志位
+   3          
+   4          uchar BCD2HEX(uchar val)
+   5          {
+   6   1              return  ((val>>4)*10)+(val&0x0f);
+   7   1      }
+   8          
+   9          
+  10          uchar HEX2BCD(uchar val)
+  11          {
+  12   1              return  (((val%100)/10)<<4)|(val%10);
+  13   1      }
+  14          
+  15          
+  16          void Delay5US() 
+  17          {
+  18   1              unsigned char i;
+  19   1      
+  20   1              _nop_();
+  21   1              _nop_();
+  22   1              _nop_();
+  23   1              i = 24;
+  24   1              while (--i);
+  25   1      }
+  26          /*******************************************************/
+  27          /**
+  28          /**  I2C开始信号
+  29          /**
+  30          /*******************************************************/
+  31          void Start_I2C()
+  32          {
+  33   1          SDA=1;                  //发送起始条件的数据信号
+  34   1          SCL=1;
+  35   1          Delay5US();             //起始条件建立时间大于4.7us,延时     
+  36   1          SDA=0;                  //发送起始信号
+  37   1          Delay5US();             // 起始条件锁定时间大于4μs                 
+  38   1          SCL=0;                  //钳住I2C总线，准备发送或接收数据
+  39   1      }                                                                                                  
+  40          /**********************************************************************/
+  41          /**
+  42          /**  I2C停止信号
+  43          /**
+  44          /**********************************************************************/
+  45          void Stop_I2C()
+  46          {
+  47   1          SDA=0;                  //发送结束条件的数据信号
+  48   1          SCL=1;                  //结束条件建立时间大于4us
+  49   1          Delay5US();                                                                                      
+  50   1          SDA=1;                  //发送I2C总线结束信号
+  51   1      }                                                                                                  
+  52          /**********************************************************************/
+  53          /**
+  54          /**  I2C发送字节
+C51 COMPILER V9.52.0.0   DS3231                                                            02/21/2012 17:16:15 PAGE 2   
+
+  55          /**
+  56          /**********************************************************************/
+  57          void SendByte(uchar c)
+  58          {
+  59   1          uchar BitCnt;
+  60   1         
+  61   1          for(BitCnt=0;BitCnt<8;BitCnt++)         //要传送的数据长度为8位
+  62   1          {
+  63   2              if((c<<BitCnt)&0x80)
+  64   2                  SDA=1;                          //判断发送位
+  65   2              else 
+  66   2                  SDA=0;     
+  67   2              SCL=1;                            //置时钟线为高，通知被控器开始接收数据位
+  68   2              Delay5US();                       //保证时钟高电平周期大于4μs   
+  69   2              SCL=0;
+  70   2          }
+  71   1          SDA=1;                                  //8位发送完后释放数据线，准备接收应答位
+  72   1          SCL=1;
+  73   1          Delay5US();
+  74   1          if(SDA==1)
+  75   1              ack=0;    
+  76   1          else
+  77   1              ack=1;                              //判断是否接收到应答信号
+  78   1          SCL=0;
+  79   1          Delay5US();
+  80   1      }          
+  81          /**********************************************************************/
+  82          /**
+  83          /**  I2C接收字节
+  84          /**
+  85          /**********************************************************************/
+  86          uchar RcvByte()
+  87          {
+  88   1         uchar retc;
+  89   1         uchar BitCnt;
+  90   1       
+  91   1         retc=0;
+  92   1         SDA=1;                           //置数据线为输入方式
+  93   1         for(BitCnt=0;BitCnt<8;BitCnt++)
+  94   1         {
+  95   2              SCL=0;                      //置时钟线为低，准备接收数据位       
+  96   2              Delay5US();                 //时钟低电平周期大于4.7μs                 
+  97   2              SCL=1;                      //置时钟线为高使数据线上数据有效
+  98   2              Delay5US();
+  99   2              retc=retc<<1;
+ 100   2              if(SDA==1)
+ 101   2                  retc=retc+1;            //读数据位,接收的数据位放入retc中
+ 102   2              Delay5US();
+ 103   2         }
+ 104   1         SCL=0;
+ 105   1         return(retc);
+ 106   1      }                           
+ 107          
+ 108          void Ack_I2C(bit a)
+ 109          {
+ 110   1              SDA     = a;  
+ 111   1          SCL=1;                    
+ 112   1          Delay5US();             //时钟低电平周期大于4μs    
+ 113   1          SCL=0;                  //清时钟线，钳住I2C总线以便继续接收
+ 114   1          Delay5US();   
+ 115   1      }                                           
+ 116          
+C51 COMPILER V9.52.0.0   DS3231                                                            02/21/2012 17:16:15 PAGE 3   
+
+ 117          uchar write_byte(uchar addr, uchar write_data)
+ 118          {
+ 119   1          Start_I2C();
+ 120   1          SendByte(DS3231_WriteAddress);
+ 121   1          if (ack == 0)
+ 122   1              return 0;
+ 123   1         
+ 124   1          SendByte(addr);   
+ 125   1          if (ack == 0)
+ 126   1              return 0;
+ 127   1         
+ 128   1          SendByte(write_data);
+ 129   1          if (ack == 0)
+ 130   1              return 0;
+ 131   1         
+ 132   1          Stop_I2C();
+ 133   1          Delay5US();      
+ 134   1          Delay5US();      
+ 135   1          return 1;
+ 136   1      }                                         
+ 137          /**********************************************************************/
+ 138          /**
+ 139          /**  I2C读取当前地址
+ 140          /**
+ 141          /**********************************************************************/
+ 142          uchar read_current()
+ 143          {
+ 144   1          uchar read_data;
+ 145   1          Start_I2C();
+ 146   1          SendByte(DS3231_ReadAddress);
+ 147   1          if(ack==0)
+ 148   1              return(0);            
+ 149   1          read_data = RcvByte();
+ 150   1          Ack_I2C(1);
+ 151   1          Stop_I2C();
+ 152   1          return read_data;
+ 153   1      }                                                
+ 154          /**********************************************************************/
+ 155          /**
+ 156          /**  I2C读取随机地址数据
+ 157          /**
+ 158          /**********************************************************************/
+ 159          uchar read_random(uchar random_addr)
+ 160          {
+ 161   1          Start_I2C();
+ 162   1          SendByte(DS3231_WriteAddress);
+ 163   1          if(ack==0)
+ 164   1              return(0);          
+ 165   1          SendByte(random_addr);
+ 166   1          if(ack==0)
+ 167   1              return(0);                          
+ 168   1          return(read_current());
+ 169   1      }                                 
+ 170          
+ 171          void ModifyTime(uchar yea,uchar mon,uchar da,uchar hou,uchar min,uchar sec)
+ 172          {
+ 173   1          uchar temp=0;
+ 174   1         
+ 175   1          temp=HEX2BCD(yea);
+ 176   1          write_byte(DS3231_YEAR,temp);   //修改年
+ 177   1         
+ 178   1          temp=HEX2BCD(mon);
+C51 COMPILER V9.52.0.0   DS3231                                                            02/21/2012 17:16:15 PAGE 4   
+
+ 179   1          write_byte(DS3231_MONTH,temp);  //修改月
+ 180   1         
+ 181   1          temp=HEX2BCD(da);
+ 182   1          write_byte(DS3231_DAY,temp);    //修改日
+ 183   1         
+ 184   1          temp=HEX2BCD(hou);
+ 185   1          write_byte(DS3231_HOUR,temp);   //修改时
+ 186   1         
+ 187   1          temp=HEX2BCD(min);
+ 188   1          write_byte(DS3231_MINUTE,temp); //修改分
+ 189   1         
+ 190   1          temp=HEX2BCD(sec);
+ 191   1          write_byte(DS3231_SECOND,temp); //修改秒
+ 192   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    377    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----       6
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =      1       1
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

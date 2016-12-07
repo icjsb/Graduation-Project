@@ -1,0 +1,10 @@
+".\Objects\main.obj",
+".\Objects\delay.obj",
+".\Objects\mp3.obj",
+".\Objects\key.obj",
+".\Objects\voice.obj",
+".\Objects\blueteeth.obj",
+".\Objects\serial.obj",
+".\Objects\ds3231.obj" 
+TO ".\Objects\main" 
+PRINT(".\Listings\main.m51") RAMSIZE(256) 

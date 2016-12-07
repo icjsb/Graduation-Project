@@ -1,0 +1,93 @@
+C51 COMPILER V9.52.0.0   MP3                                                               02/21/2012 17:16:14 PAGE 1   
+
+
+C51 COMPILER V9.52.0.0, COMPILATION OF MODULE MP3
+OBJECT MODULE PLACED IN .\Objects\mp3.obj
+COMPILER INVOKED BY: C:\Keil_v5\C51\BIN\C51.EXE mp3\mp3.c LARGE BROWSE INCDIR(.\blueteeth;.\delay;.\main;.\mp3;.\serial;
+                    -.\voice;.\key;.\ds3231) DEBUG OBJECTEXTEND PRINT(.\Listings\mp3.lst) OBJECT(.\Objects\mp3.obj)
+
+line level    source
+
+   1          #include"mp3.h"
+   2          
+   3          /********************************************************************************************
+   4           - 功能描述：求和校验
+   5           - 隶属模块：
+   6           - 参数说明：
+   7           - 返回说明：
+   8           - 注：      和校验的思路如下
+   9                       发送的指令，去掉起始和结束。将中间的6个字节进行累加，最后取反码
+  10                       接收端就将接收到的一帧数据，去掉起始和结束。将中间的数据累加，再加上接收到的校验
+  11                       字节。刚好为0.这样就代表接收到的数据完全正确。
+  12          ********************************************************************************************/
+  13          void DoSum( uchar *Str, uchar len)
+  14          {
+  15   1          uint xorsum = 0;
+  16   1          uchar i;
+  17   1      
+  18   1          for(i=0; i<len; i++)
+  19   1          {
+  20   2              xorsum  = xorsum + Str[i];
+  21   2          }
+  22   1              xorsum     = 0 -xorsum;
+  23   1              *(Str+i)   = (uchar)(xorsum >>8);
+  24   1              *(Str+i+1) = (uchar)(xorsum & 0x00ff);
+  25   1      }
+  26          
+  27          
+  28          /*****************************************************************************************************
+  29           - 功能描述： 串口2、MP3发送一帧数据
+  30           - 隶属模块： 内部 
+  31           - 参数说明： 
+  32           - 返回说明： 
+  33           - 注：无     
+  34          *****************************************************************************************************/
+  35          void SendCmd(uchar len)
+  36          {
+  37   1          uchar i = 0 ;
+  38   1      
+  39   1          UART_2SendOneByte(0x7E);    /*起始*/
+  40   1          for(i=0; i<len; i++)                /*数据*/
+  41   1          {
+  42   2                      UART_2SendOneByte(Send_buf[i]) ;
+  43   2          }
+  44   1          UART_2SendOneByte(0xEF) ;   /*结束*/
+  45   1      }
+  46          
+  47          
+  48          /********************************************************************************************
+  49           - 功能描述： 串口2向外发送命令[包括控制和查询](MP3模块使用)
+  50           - 隶属模块： 外部
+  51           - 参数说明： CMD:表示控制指令，请查阅指令表，还包括查询的相关指令
+  52                        feedback:是否需要应答[0:不需要应答，1:需要应答]
+  53                        data:传送的参数
+  54           - 返回说明：
+C51 COMPILER V9.52.0.0   MP3                                                               02/21/2012 17:16:14 PAGE 2   
+
+  55           - 注：       
+  56          ********************************************************************************************/
+  57          void Uart_SendCMD(uchar CMD ,uchar feedback , uchar dath , uchar datl)
+  58          {
+  59   1          Send_buf[0] = 0xff;    //保留字节 
+  60   1          Send_buf[1] = 0x06;    //长度
+  61   1          Send_buf[2] = CMD;     //控制指令
+  62   1          Send_buf[3] = feedback;//是否需要反馈
+  63   1          Send_buf[4] = dath;   //data高八位
+  64   1          Send_buf[5] = datl;    //datal低八位
+  65   1          DoSum(&Send_buf[0],6);        //校验
+  66   1          SendCmd(8);       //发送此帧数据
+  67   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    226    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =     20      11
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

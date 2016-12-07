@@ -1,0 +1,62 @@
+C51 COMPILER V9.52.0.0   BLUETEETH                                                         02/21/2012 17:16:15 PAGE 1   
+
+
+C51 COMPILER V9.52.0.0, COMPILATION OF MODULE BLUETEETH
+OBJECT MODULE PLACED IN .\Objects\blueteeth.obj
+COMPILER INVOKED BY: C:\Keil_v5\C51\BIN\C51.EXE blueteeth\blueteeth.c LARGE BROWSE INCDIR(.\blueteeth;.\delay;.\main;.\m
+                    -p3;.\serial;.\voice;.\key;.\ds3231) DEBUG OBJECTEXTEND PRINT(.\Listings\blueteeth.lst) OBJECT(.\Objects\blueteeth.obj)
+
+line level    source
+
+   1          #include"blueteeth.h"
+   2          
+   3          /*****************************************************************************************************
+   4           - 功能描述： 串口2、蓝牙发送一帧数据
+   5           - 隶属模块： 内部 
+   6           - 参数说明： 
+   7           - 返回说明： 
+   8           - 注：无     
+   9          *****************************************************************************************************/
+  10          void SendBlue(uchar len)
+  11          {
+  12   1          uchar i = 0 ;       
+  13   1          for(i=0; i<len; i++)                /*数据*/
+  14   1          {
+  15   2                      UART_2SendOneByte(Send_buf[i]) ;
+  16   2          }
+  17   1      }
+  18          
+  19          
+  20          /********************************************************************************************
+  21           - 功能描述： 串口2向外发送命令[包括控制和查询](蓝牙模块使用)
+  22           - 隶属模块： 外部
+  23           - 参数说明： 
+  24          
+  25           - 返回说明：
+  26           - 注：       
+  27          ********************************************************************************************/
+  28          void Uart_SendBlue(uchar dat1 ,uchar dat2 , uchar dat3)
+  29          {
+  30   1              Send_buf[0] = 0x55;              /*起始:U */
+  31   1              Send_buf[1] = 0x53;              /*起始:S */
+  32   1          Send_buf[2] = dat1;    //
+  33   1          Send_buf[3] = dat2;    //
+  34   1          Send_buf[4] = dat3;    //
+  35   1              Send_buf[5] = 0x7e;      /*结束:~ */
+  36   1              Send_buf[6] = 0x66;     /*结束:f */
+  37   1          SendBlue(7);            /*发送此帧数据*/
+  38   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =     77    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =     20       2
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

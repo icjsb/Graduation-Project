@@ -1,0 +1,66 @@
+C51 COMPILER V9.52.0.0   SERIAL                                                            02/21/2012 17:16:15 PAGE 1   
+
+
+C51 COMPILER V9.52.0.0, COMPILATION OF MODULE SERIAL
+OBJECT MODULE PLACED IN .\Objects\serial.obj
+COMPILER INVOKED BY: C:\Keil_v5\C51\BIN\C51.EXE serial\serial.c LARGE BROWSE INCDIR(.\blueteeth;.\delay;.\main;.\mp3;.\s
+                    -erial;.\voice;.\key;.\ds3231) DEBUG OBJECTEXTEND PRINT(.\Listings\serial.lst) OBJECT(.\Objects\serial.obj)
+
+line level    source
+
+   1          #include"serial.h"
+   2          /****************串行口1发送****************/
+   3          void UART_1SendOneByte(uchar c)
+   4          {
+   5   1          SBUF = c;
+   6   1          while(!TI);                 /*若TI=0，在此等待*/
+   7   1          TI = 0;      
+   8   1      }
+   9          
+  10          /****************串行口2发送****************/
+  11          void UART_2SendOneByte(uchar c)
+  12          {
+  13   1              S2BUF = c;
+  14   1          while(!(S2CON&S2TI));   /*若S2TI=0，在此等待*/
+  15   1          S2CON&=~S2TI;                       /*S2TI=0*/
+  16   1      }
+  17          
+  18          void UartInit()         
+  19          {                                               
+  20   1                                                      //串口一19200bps@22.1184MHz
+  21   1              PCON &= 0x7F;           //波特率不倍速
+  22   1              SCON = 0x50;            //8位数据,可变波特率
+  23   1              AUXR |= 0x40;           //定时器1时钟为Fosc,即1T
+  24   1              AUXR &= 0xFE;           //串口1选择定时器1为波特率发生器
+  25   1              TMOD &= 0x0F;           //清除定时器1模式位
+  26   1              TMOD |= 0x20;           //设定定时器1为8位自动重装方式
+  27   1              TL1 = 0xDC;                     //设定定时初值
+  28   1              TH1 = 0xDC;                     //设定定时器重装值
+  29   1              ET1 = 0;                        //禁止定时器1中断
+  30   1              TR1 = 1;                        //启动定时器1
+  31   1      
+  32   1                                                      //串口二9600bps@22.1184MHz
+  33   1              AUXR &= 0xF7;           //波特率不倍速
+  34   1              S2CON = 0x50;           //8位数据,可变波特率
+  35   1              AUXR |= 0x04;           //独立波特率发生器时钟为Fosc,即1T
+  36   1              BRT = 0xB8;                     //设定独立波特率发生器重装值
+  37   1              AUXR |= 0x10;           //启动独立波特率发生器
+  38   1              
+  39   1              EA = 1;                         //开总中断
+  40   1              ES = 1;                         //开串口中断
+  41   1              REN = 1;                        //接收数据
+  42   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =     69    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

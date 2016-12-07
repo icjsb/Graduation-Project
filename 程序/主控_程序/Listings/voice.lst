@@ -1,0 +1,63 @@
+C51 COMPILER V9.52.0.0   VOICE                                                             02/21/2012 17:16:15 PAGE 1   
+
+
+C51 COMPILER V9.52.0.0, COMPILATION OF MODULE VOICE
+OBJECT MODULE PLACED IN .\Objects\voice.obj
+COMPILER INVOKED BY: C:\Keil_v5\C51\BIN\C51.EXE voice\voice.c LARGE BROWSE INCDIR(.\blueteeth;.\delay;.\main;.\mp3;.\ser
+                    -ial;.\voice;.\key;.\ds3231) DEBUG OBJECTEXTEND PRINT(.\Listings\voice.lst) OBJECT(.\Objects\voice.obj)
+
+line level    source
+
+   1          #include"voice.h"
+   2          void Voice_Init()/*语音识别初始化*/
+   3          {
+   4   1              Uart_SendYuYin(0xa0,0xa0,0xa0);//语音识别模块初始化
+   5   1              delay50ms();
+   6   1              Uart_SendYuYin(0xa1,0x10,0x05);//配置麦克风灵敏度
+   7   1              delay50ms();
+   8   1              Uart_SendYuYin(0xa2,0x22,0x24);//配置噪声门限
+   9   1              delay50ms();
+  10   1      }
+  11          /*****************************************************************************************************
+  12           - 功能描述： 串口1发送一帧数据(语音识别模块)
+  13           - 隶属模块： 内部 
+  14           - 参数说明： 
+  15           - 返回说明： 
+  16           - 注：无     
+  17          *****************************************************************************************************/
+  18          void SendYY(uchar len)
+  19          {
+  20   1          uchar i = 0 ;
+  21   1          for(i=0; i<len; i++)/*数据*/
+  22   1          {
+  23   2                      UART_1SendOneByte(Send_buf[i]) ;
+  24   2          }
+  25   1      }
+  26          /**************************************************************************************
+  27           - 功能描述： 串口1向外发送命令(语音)
+  28           - 隶属模块： 外部
+  29           - 参数说明： YS表示首位标识  YL表示低八位  YH 表示高八位
+  30           - 返回说明：
+  31           - 注：
+  32          **************************************************************************************/
+  33          void Uart_SendYuYin(uchar YS,uchar YL,uchar YH)
+  34          {
+  35   1              Send_buf[0] = YS;
+  36   1              Send_buf[1] = YL;
+  37   1              Send_buf[2] = YH;
+  38   1              SendYY(3);
+  39   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =     97    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =     20       2
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

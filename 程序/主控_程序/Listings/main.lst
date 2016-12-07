@@ -1,0 +1,1053 @@
+C51 COMPILER V9.52.0.0   MAIN                                                              02/21/2012 17:16:14 PAGE 1   
+
+
+C51 COMPILER V9.52.0.0, COMPILATION OF MODULE MAIN
+OBJECT MODULE PLACED IN .\Objects\main.obj
+COMPILER INVOKED BY: C:\Keil_v5\C51\BIN\C51.EXE main\main.c LARGE BROWSE INCDIR(.\main;.\delay;.\mp3;.\key;.\voice;.\blu
+                    -eteeth;.\serial;.\blueteeth;.\delay;.\main;.\mp3;.\serial;.\voice;.\key;.\ds3231) DEBUG OBJECTEXTEND PRINT(.\Listings\ma
+                    -in.lst) OBJECT(.\Objects\main.obj)
+
+line level    source
+
+   1          #include"stc12c5axx.h"
+   2          #include"intrins.h"
+   3          #include"delay.h"
+   4          #include"main.h"
+   5          #include"header.h"
+   6          #include"mp3.h"
+   7          #include"key.h"
+   8          #include"voice.h"
+   9          #include"blueteeth.h"
+  10          #include"serial.h"
+  11          #include"ds3231.h"
+  12          
+  13          /*语音识别返回值标志位：flag，模式切换标志位：mode*/
+  14          uchar flag ,mode;
+  15          
+  16          /*****************主函数******************/
+  17          void main()
+  18          {
+  19   1              uchar cache,poem,song,c;
+  20   1              c=0;/*陈奕迅歌曲*/
+  21   1              poem = 17;/*古诗*/
+  22   1              song = 41;/*歌曲*/
+  23   1              En_Mp3;
+  24   1              busy = 1;                                               /*MP3判忙标志位置高电平*/
+  25   1              mode = 0;
+  26   1          UartInit();                                                 /*串行口初始化*/
+  27   1              delay200ms();
+  28   1              delay200ms();
+  29   1              delay200ms();
+  30   1              Uart_SendCMD(0x06,0x00,0x00,0x0e);      /*设置MP3音量为9*/
+  31   1              delay50ms();
+  32   1              Uart_SendCMD(0x0f,0x00,0x02,0x01);      /*播放语音*/
+  33   1              Voice_Init();
+  34   1              Uart_SendYuYin(0xa9,0x01,0x00);         /*配置识别组*/
+  35   1              delay800ms();
+  36   1              while(!busy);
+  37   1              Uart_SendYuYin(0xaa,0x00,0x00);         /*识别开始*/
+  38   1              while(1)
+  39   1              {
+  40   2                      Scankey();
+  41   2                      switch(mode)
+  42   2                      {
+  43   3                              case 0:
+  44   3                                              if(flag==1)
+  45   3                                              {
+  46   4                                                      flag = 0; 
+  47   4                                              
+  48   4                                                      if(Recv_buf[1]  == 0x00 )/*识别为001组001号：你好*/
+  49   4                                                      {
+  50   5                                                              Uart_SendCMD(0x0f,0x00,0x02,0x04);/*你好呀*/ 
+  51   5                                                              delay800ms();
+  52   5                                                              while(!busy);
+  53   5                                                              flag = 0; 
+C51 COMPILER V9.52.0.0   MAIN                                                              02/21/2012 17:16:14 PAGE 2   
+
+  54   5                                                              Uart_SendYuYin(0xaa,0x00,0x00);/*打开识别*/
+  55   5                                                      }
+  56   4                                                      
+  57   4                                                      if(Recv_buf[1]  == 0x01 )/*识别为001组002号：你叫什么名字*/
+  58   4                                                      {
+  59   5                                                              Uart_SendCMD(0x0f,0x00,0x02,0x0c);/*我叫小溪*/
+  60   5                                                              delay800ms();
+  61   5                                                              while(!busy);
+  62   5                                                              flag = 0; 
+  63   5                                                              Uart_SendYuYin(0xaa,0x00,0x00);/*打开识别*/
+  64   5                                                      }
+  65   4                                                      
+  66   4                                                      if(Recv_buf[1]  == 0x02 )/*识别为001组003号：你的主人是谁*/
+  67   4                                                      {
+  68   5                                                              Uart_SendCMD(0x0f,0x00,0x02,0x0d);/*我的主人是马攀*/
+  69   5                                                              delay800ms();
+  70   5                                                              while(!busy);
+  71   5                                                              flag = 0; 
+  72   5                                                              Uart_SendYuYin(0xaa,0x00,0x00);/*打开识别*/
+  73   5                                                      }
+  74   4                                                      
+  75   4                                                      if(Recv_buf[1]  == 0x03 )/*识别为001组004号：你是谁*/
+  76   4                                                      {
+  77   5                                                              Uart_SendCMD(0x0f,0x00,0x02,0x01);/*我是智能家居助手小溪*/
+  78   5                                                              delay800ms();
+  79   5                                                              while(!busy);
+  80   5                                                              flag = 0; 
+  81   5                                                              Uart_SendYuYin(0xaa,0x00,0x00);/*打开识别*/
+  82   5                                                      }
+  83   4                                                      
+  84   4                                                      if(Recv_buf[1]  == 0x04 )/*识别为001组005号：你太傻了*/
+  85   4                                                      {
+  86   5                                                              Uart_SendCMD(0x0f,0x00,0x02,0x06);/*你说什么我没带眼镜听不清*/
+  87   5                                                              delay800ms();
+  88   5                                                              while(!busy);
+  89   5                                                              flag = 0; 
+  90   5                                                              Uart_SendYuYin(0xaa,0x00,0x00);/*打开识别*/
+  91   5                                                      }
+  92   4                                                      
+  93   4                                                      if(Recv_buf[1]  == 0x05 )/*识别为001组006号：1+1等于几*/
+  94   4                                                      {
+  95   5                                                              Uart_SendCMD(0x0f,0x00,0x02,0x0e);/*一加一等于二*/
+  96   5                                                              delay800ms();
+  97   5                                                              while(!busy);
+  98   5                                                              flag = 0; 
+  99   5                                                              Uart_SendYuYin(0xaa,0x00,0x00);/*打开识别*/
+ 100   5                                                      }
+ 101   4                                                      
+ 102   4                                                      if(Recv_buf[1]  == 0x06 )/*识别为001组007号：你几岁了*/
+ 103   4                                                      {
+ 104   5                                                              Uart_SendCMD(0x0f,0x00,0x02,0x05);/*我今年一岁了*/
+ 105   5                                                              delay800ms();
+ 106   5                                                              while(!busy);
+ 107   5                                                              flag = 0; 
+ 108   5                                                              Uart_SendYuYin(0xaa,0x00,0x00);/*打开识别*/
+ 109   5                                                      }
+ 110   4                                                      
+ 111   4                                                      if(Recv_buf[1]  == 0x07 )/*识别为001组008号：你家在哪里*/
+ 112   4                                                      {
+ 113   5                                                              Uart_SendCMD(0x0f,0x00,0x02,0x08);/*我来自郑州大学西亚斯国际学院*/
+ 114   5                                                              delay800ms();
+ 115   5                                                              while(!busy);
+C51 COMPILER V9.52.0.0   MAIN                                                              02/21/2012 17:16:14 PAGE 3   
+
+ 116   5                                                              flag = 0; 
+ 117   5                                                              Uart_SendYuYin(0xaa,0x00,0x00);/*打开识别*/
+ 118   5                                                      }
+ 119   4                                                      if(Recv_buf[1]  == 0x08 )/*识别为001组009号：你很聪明呀*/
+ 120   4                                                      {
+ 121   5                                                              Uart_SendCMD(0x0f,0x00,0x02,0x0b);/*我也这么觉得*/
+ 122   5                                                              delay800ms();
+ 123   5                                                              while(!busy);
+ 124   5                                                              flag = 0; 
+ 125   5                                                              Uart_SendYuYin(0xaa,0x00,0x00);/*打开识别*/
+ 126   5                                                      }
+ 127   4                                                      if(Recv_buf[1]  == 0x09)/*识别为001组010号：你会游泳吗*/
+ 128   4                                                      {
+ 129   5                                                              Uart_SendCMD(0x0f,0x00,0x02,0x0a);/*我当然会游泳啦*/
+ 130   5                                                              delay800ms();
+ 131   5                                                              while(!busy);
+ 132   5                                                              flag = 0; 
+ 133   5                                                              Uart_SendYuYin(0xaa,0x00,0x00);/*打开识别*/
+ 134   5                                                      }
+ 135   4                                                      if(Recv_buf[1]  == 0x0a)/*识别为001组011号：我要拆了你*/
+ 136   4                                                      {
+ 137   5                                                              Uart_SendCMD(0x0f,0x00,0x02,0x06);/*你说什么我没戴眼镜听不清*/
+ 138   5                                                              delay800ms();
+ 139   5                                                              while(!busy);
+ 140   5                                                              flag = 0; 
+ 141   5                                                              Uart_SendYuYin(0xaa,0x00,0x00);/*打开识别*/
+ 142   5                                                      }
+ 143   4                                                      if((Recv_buf[1] == 0x0b)||(Recv_buf[1] == 37)||(Recv_buf[1] == 53))/*识别为001组012号：唱首歌吧*/
+ 144   4                                                      {
+ 145   5                                                              if(song>52)
+ 146   5                                                                      song=41;
+ 147   5                                                              Uart_SendCMD(0x0f,0x00,0x02,song);/*歌曲*/
+ 148   5                                                              song++;
+ 149   5                                                              delay800ms();
+ 150   5                                                              while(!busy);
+ 151   5                                                              flag = 0; 
+ 152   5                                                              Uart_SendYuYin(0xaa,0x00,0x00);/*打开识别*/
+ 153   5                                                      }
+ 154   4                                                      if(Recv_buf[1] == 38)/*识别为薛之谦*/
+ 155   4                                                      {
+ 156   5                                                              Uart_SendCMD(0x0f,0x00,0x02,50);/*演员*/
+ 157   5                                                              delay800ms();
+ 158   5                                                              while(!busy);
+ 159   5                                                              flag = 0; 
+ 160   5                                                              Uart_SendYuYin(0xaa,0x00,0x00);/*打开识别*/
+ 161   5                                                      }
+ 162   4                                                      if(Recv_buf[1] == 39)/*识别为王力宏*/
+ 163   4                                                      {
+ 164   5                                                              Uart_SendCMD(0x0f,0x00,0x02,44);/*大城小爱*/
+ 165   5                                                              delay800ms();
+ 166   5                                                              while(!busy);
+ 167   5                                                              flag = 0; 
+ 168   5                                                              Uart_SendYuYin(0xaa,0x00,0x00);/*打开识别*/
+ 169   5                                                      }
+ 170   4                                                      if(Recv_buf[1] == 40)/*识别为林俊杰*/
+ 171   4                                                      {
+ 172   5                                                              Uart_SendCMD(0x0f,0x00,0x02,42);/*小酒窝*/
+ 173   5                                                              delay800ms();
+ 174   5                                                              while(!busy);
+ 175   5                                                              flag = 0; 
+ 176   5                                                              Uart_SendYuYin(0xaa,0x00,0x00);/*打开识别*/
+ 177   5                                                      }
+C51 COMPILER V9.52.0.0   MAIN                                                              02/21/2012 17:16:14 PAGE 4   
+
+ 178   4                                                      if(Recv_buf[1] == 41)/*识别为李荣浩*/
+ 179   4                                                      {
+ 180   5                                                              Uart_SendCMD(0x0f,0x00,0x02,45);/*李白*/
+ 181   5                                                              delay800ms();
+ 182   5                                                              while(!busy);
+ 183   5                                                              flag = 0; 
+ 184   5                                                              Uart_SendYuYin(0xaa,0x00,0x00);/*打开识别*/
+ 185   5                                                      }
+ 186   4                                                      if(Recv_buf[1]  == 42 )/*识别为苏打绿*/
+ 187   4                                                      {
+ 188   5                                                              Uart_SendCMD(0x0f,0x00,0x02,47);/*小情歌*/
+ 189   5                                                              delay800ms();
+ 190   5                                                              while(!busy);
+ 191   5                                                              flag = 0; 
+ 192   5                                                              Uart_SendYuYin(0xaa,0x00,0x00);/*打开识别*/
+ 193   5                                                      }
+ 194   4                                                      if(Recv_buf[1]  ==  43)/*识别为陈奕迅*/
+ 195   4                                                      {
+ 196   5                                                              c++;
+ 197   5                                                              if(c%2 == 1)
+ 198   5                                                              {
+ 199   6                                                                      Uart_SendCMD(0x0f,0x00,0x02,41);/*红玫瑰*/
+ 200   6                                                              }
+ 201   5                                                              if(c%2 == 0)
+ 202   5                                                              {
+ 203   6                                                                      Uart_SendCMD(0x0f,0x00,0x02,48);/*十年*/
+ 204   6                                                              }
+ 205   5                                                              delay800ms();
+ 206   5                                                              while(!busy);
+ 207   5                                                              flag = 0; 
+ 208   5                                                              Uart_SendYuYin(0xaa,0x00,0x00);/*打开识别*/
+ 209   5                                                      }
+ 210   4                                                      if(Recv_buf[1]  ==  44)/*识别为至少还有你*/
+ 211   4                                                      {
+ 212   5                                                              Uart_SendCMD(0x0f,0x00,0x02,51);/*至少还有你*/
+ 213   5                                                              delay800ms();
+ 214   5                                                              while(!busy);
+ 215   5                                                              flag = 0; 
+ 216   5                                                              Uart_SendYuYin(0xaa,0x00,0x00);/*打开识别*/
+ 217   5                                                      }
+ 218   4                                                      if(Recv_buf[1]  ==  45)/*识别为会呼吸的痛*/
+ 219   4                                                      {
+ 220   5                                                              Uart_SendCMD(0x0f,0x00,0x02,52);/*会呼吸的痛*/
+ 221   5                                                              delay800ms();
+ 222   5                                                              while(!busy);
+ 223   5                                                              flag = 0; 
+ 224   5                                                              Uart_SendYuYin(0xaa,0x00,0x00);/*打开识别*/
+ 225   5                                                      }
+ 226   4                                                      if(Recv_buf[1]  ==  46)/*识别为红玫瑰*/
+ 227   4                                                      {
+ 228   5                                                              Uart_SendCMD(0x0f,0x00,0x02,41);/*红玫瑰*/
+ 229   5                                                              delay800ms();
+ 230   5                                                              while(!busy);
+ 231   5                                                              flag = 0; 
+ 232   5                                                              Uart_SendYuYin(0xaa,0x00,0x00);/*打开识别*/
+ 233   5                                                      }
+ 234   4                                                      if(Recv_buf[1]  ==  47)/*识别为小酒窝*/
+ 235   4                                                      {
+ 236   5                                                              Uart_SendCMD(0x0f,0x00,0x02,42);/*小酒窝*/
+ 237   5                                                              delay800ms();
+ 238   5                                                              while(!busy);
+ 239   5                                                              flag = 0; 
+C51 COMPILER V9.52.0.0   MAIN                                                              02/21/2012 17:16:14 PAGE 5   
+
+ 240   5                                                              Uart_SendYuYin(0xaa,0x00,0x00);/*打开识别*/
+ 241   5                                                      }
+ 242   4                                                      if(Recv_buf[1]  == 48 )/*识别为时间都去哪了*/
+ 243   4                                                      {
+ 244   5                                                              Uart_SendCMD(0x0f,0x00,0x02,43);/*时间都去哪了*/
+ 245   5                                                              delay800ms();
+ 246   5                                                              while(!busy);
+ 247   5                                                              flag = 0; 
+ 248   5                                                              Uart_SendYuYin(0xaa,0x00,0x00);/*打开识别*/
+ 249   5                                                      }
+ 250   4                                                      if(Recv_buf[1]  == 49 )/*识别为大城小爱*/
+ 251   4                                                      {
+ 252   5                                                              Uart_SendCMD(0x0f,0x00,0x02,44);/*大城小爱*/
+ 253   5                                                              delay800ms();
+ 254   5                                                              while(!busy);
+ 255   5                                                              flag = 0; 
+ 256   5                                                              Uart_SendYuYin(0xaa,0x00,0x00);/*打开识别*/
+ 257   5                                                      }
+ 258   4                                                      if(Recv_buf[1]  == 50 )/*识别为演员*/
+ 259   4                                                      {
+ 260   5                                                              Uart_SendCMD(0x0f,0x00,0x02,50);/*演员*/
+ 261   5                                                              delay800ms();
+ 262   5                                                              while(!busy);
+ 263   5                                                              flag = 0; 
+ 264   5                                                              Uart_SendYuYin(0xaa,0x00,0x00);/*打开识别*/
+ 265   5                                                      }
+ 266   4                                                      if(Recv_buf[1]  == 51 )/*识别为童话*/
+ 267   4                                                      {
+ 268   5                                                              Uart_SendCMD(0x0f,0x00,0x02,46);/*童话*/
+ 269   5                                                              delay800ms();
+ 270   5                                                              while(!busy);
+ 271   5                                                              flag = 0; 
+ 272   5                                                              Uart_SendYuYin(0xaa,0x00,0x00);/*打开识别*/
+ 273   5                                                      }
+ 274   4                                                      
+ 275   4                                                      if((Recv_buf[1] == 14)||(Recv_buf[1] == 15)||(Recv_buf[1] == 23))/*识别为现在几点了*/
+ 276   4                                                      {
+ 277   5                                                              mode = 2;
+ 278   5                                                      }
+ 279   4                                                      
+ 280   4                                                      
+ 281   4                                                      
+ 282   4                                                      if(Recv_buf[1]  == 0x0c)/*识别为001组013号：说话小点声*/
+ 283   4                                                      {
+ 284   5                                                              Uart_SendCMD(0x06,0x00,0x00,0x0a);
+ 285   5                                                              delay50ms();
+ 286   5                                                              Uart_SendCMD(0x0f,0x00,0x02,0x07);/*好的主人*/
+ 287   5                                                              delay800ms();
+ 288   5                                                              while(!busy);
+ 289   5                                                              flag = 0; 
+ 290   5                                                              Uart_SendYuYin(0xaa,0x00,0x00);/*打开识别*/
+ 291   5                                                      }
+ 292   4                                                      if(Recv_buf[1]  == 0x0d)/*识别为001组014号：说话大点声*/
+ 293   4                                                      {
+ 294   5                                                              Uart_SendCMD(0x06,0x00,0x00,0x12);/*设置音量为20*/
+ 295   5                                                              delay50ms();
+ 296   5                                                              Uart_SendCMD(0x0f,0x00,0x02,0x07);/*好的主人*/
+ 297   5                                                              delay800ms();
+ 298   5                                                              while(!busy);
+ 299   5                                                              flag = 0; 
+ 300   5                                                              Uart_SendYuYin(0xaa,0x00,0x00);/*打开识别*/
+ 301   5                                                      }
+C51 COMPILER V9.52.0.0   MAIN                                                              02/21/2012 17:16:14 PAGE 6   
+
+ 302   4                                                      if((Recv_buf[1] == 0x10)||(Recv_buf[1]  == 52))/*识别为001组017号：背首古诗*/
+ 303   4                                                      {
+ 304   5                                                              if(poem>34)
+ 305   5                                                                      poem = 17;
+ 306   5                                                              Uart_SendCMD(0x0f,0x00,0x02,poem);/*背古诗*/
+ 307   5                                                              poem++;
+ 308   5                                                              delay800ms();
+ 309   5                                                              while(!busy);
+ 310   5                                                              flag = 0; 
+ 311   5                                                              Uart_SendYuYin(0xaa,0x00,0x00);/*打开识别*/
+ 312   5                                                      }
+ 313   4                                                      /**/
+ 314   4                                                      if(Recv_buf[1]  == 0x11)/*识别为001组018号：打开台灯*/
+ 315   4                                                      {
+ 316   5                                                              Uart_SendCMD(0x0f,0x00,0x05,0x03);/*台灯已打开*/
+ 317   5                                                              delay800ms();
+ 318   5                                                              En_Blu;
+ 319   5                                                              delay50ms();
+ 320   5                                                              Uart_SendBlue(0x31,0x31,0x33);/*打开台灯*/
+ 321   5                                                              En_Mp3;
+ 322   5                                                              delay50ms();
+ 323   5                                                              while(!busy);
+ 324   5                                                              flag = 0; 
+ 325   5                                                              Uart_SendYuYin(0xaa,0x00,0x00);/*打开识别*/
+ 326   5                                                      }
+ 327   4                                                      if(Recv_buf[1]  == 0x12)/*识别为001组019号：打开风扇*/
+ 328   4                                                      {
+ 329   5                                                              Uart_SendCMD(0x0f,0x00,0x05,0x01);/*风扇已打开*/
+ 330   5                                                              delay800ms();
+ 331   5                                                              En_Blu;
+ 332   5                                                              delay50ms();
+ 333   5                                                              Uart_SendBlue(0x31,0x31,0x32);
+ 334   5                                                              En_Mp3;
+ 335   5                                                              delay50ms();
+ 336   5                                                              while(!busy);
+ 337   5                                                              flag = 0; 
+ 338   5                                                              Uart_SendYuYin(0xaa,0x00,0x00);/*打开识别*/
+ 339   5                                                      }
+ 340   4                                                      if(Recv_buf[1]  == 0x1b)/*识别为001组028号：打开红灯*/
+ 341   4                                                      {
+ 342   5                                                              Uart_SendCMD(0x0f,0x00,0x05,0x0d);/*红灯已打开*/
+ 343   5                                                              delay800ms();
+ 344   5                                                              En_Blu;
+ 345   5                                                              delay50ms();
+ 346   5                                                              Uart_SendBlue(0x31,0x31,0x38);/*打开红灯*/
+ 347   5                                                              En_Mp3;
+ 348   5                                                              delay50ms();
+ 349   5                                                              while(!busy);
+ 350   5                                                              flag = 0; 
+ 351   5                                                              Uart_SendYuYin(0xaa,0x00,0x00);/*打开识别*/
+ 352   5                                                      }
+ 353   4                                                      if(Recv_buf[1]  == 0x1d)/*识别为001组030号：打开绿灯*/
+ 354   4                                                      {
+ 355   5                                                              Uart_SendCMD(0x0f,0x00,0x05,0x0b);/*绿灯已打开*/
+ 356   5                                                              delay800ms();
+ 357   5                                                              En_Blu;
+ 358   5                                                              delay50ms();
+ 359   5                                                              Uart_SendBlue(0x31,0x31,0x37);
+ 360   5                                                              En_Mp3;
+ 361   5                                                              delay50ms();
+ 362   5                                                              while(!busy);
+ 363   5                                                              flag = 0; 
+C51 COMPILER V9.52.0.0   MAIN                                                              02/21/2012 17:16:14 PAGE 7   
+
+ 364   5                                                              Uart_SendYuYin(0xaa,0x00,0x00);/*打开识别*/
+ 365   5                                                      }
+ 366   4                                                      if(Recv_buf[1]  == 0x1c)/*识别为001组029号：打开蓝灯*/
+ 367   4                                                      {
+ 368   5                                                              Uart_SendCMD(0x0f,0x00,0x05,0x09);/*好的主人*/
+ 369   5                                                              delay800ms();
+ 370   5                                                              En_Blu;
+ 371   5                                                              delay50ms();
+ 372   5                                                              Uart_SendBlue(0x31,0x31,0x36);
+ 373   5                                                              En_Mp3;
+ 374   5                                                              delay50ms();
+ 375   5                                                              while(!busy);
+ 376   5                                                              flag = 0; 
+ 377   5                                                              Uart_SendYuYin(0xaa,0x00,0x00);/*打开识别*/
+ 378   5                                                      }
+ 379   4                                                      
+ 380   4                                                      if(Recv_buf[1]  == 0x24)/*识别为001组037号：打开电视*/
+ 381   4                                                      {
+ 382   5                                                              Uart_SendCMD(0x0f,0x00,0x05,0x05);/*好的主人*/
+ 383   5                                                              delay800ms();
+ 384   5                                                              En_Blu;
+ 385   5                                                              delay50ms();
+ 386   5                                                              Uart_SendBlue(0x31,0x31,0x34);
+ 387   5                                                              En_Mp3;
+ 388   5                                                              delay50ms();
+ 389   5                                                              while(!busy);
+ 390   5                                                              flag = 0; 
+ 391   5                                                              Uart_SendYuYin(0xaa,0x00,0x00);/*打开识别*/
+ 392   5                                                      }
+ 393   4                                                      if(Recv_buf[1]  == 0x21)/*识别为001组034号：打开热水器*/
+ 394   4                                                      {
+ 395   5                                                              Uart_SendCMD(0x0f,0x00,0x05,0x07);/*热水器已打开*/
+ 396   5                                                              delay800ms();
+ 397   5                                                              En_Blu;
+ 398   5                                                              delay50ms();
+ 399   5                                                              Uart_SendBlue(0x31,0x31,0x35);
+ 400   5                                                              En_Mp3;
+ 401   5                                                              delay50ms();
+ 402   5                                                              while(!busy);
+ 403   5                                                              flag = 0; 
+ 404   5                                                              Uart_SendYuYin(0xaa,0x00,0x00);/*打开识别*/
+ 405   5                                                      }
+ 406   4                                                      /**/
+ 407   4                                                      if(Recv_buf[1]  == 0x1a)/*识别为001组027号：关闭台灯*/
+ 408   4                                                      {
+ 409   5                                                              Uart_SendCMD(0x0f,0x00,0x05,0x04);/*台灯已关闭*/
+ 410   5                                                              delay800ms();
+ 411   5                                                              En_Blu;
+ 412   5                                                              delay50ms();
+ 413   5                                                              Uart_SendBlue(0x30,0x31,0x33);/*关闭台灯*/
+ 414   5                                                              En_Mp3;
+ 415   5                                                              delay50ms();
+ 416   5                                                              while(!busy);
+ 417   5                                                              flag = 0; 
+ 418   5                                                              Uart_SendYuYin(0xaa,0x00,0x00);/*打开识别*/
+ 419   5                                                      }
+ 420   4                                                      if(Recv_buf[1]  == 0x19)/*识别为001组026号：关闭风扇*/
+ 421   4                                                      {
+ 422   5                                                              Uart_SendCMD(0x0f,0x00,0x05,0x02);/*风扇已关闭*/
+ 423   5                                                              delay800ms();
+ 424   5                                                              En_Blu;
+ 425   5                                                              delay50ms();
+C51 COMPILER V9.52.0.0   MAIN                                                              02/21/2012 17:16:14 PAGE 8   
+
+ 426   5                                                              Uart_SendBlue(0x30,0x31,0x32);
+ 427   5                                                              En_Mp3;
+ 428   5                                                              delay50ms();
+ 429   5                                                              while(!busy);
+ 430   5                                                              flag = 0; 
+ 431   5                                                              Uart_SendYuYin(0xaa,0x00,0x00);/*打开识别*/
+ 432   5                                                      }
+ 433   4                                                      if(Recv_buf[1]  == 0x1e)/*识别为001组031号：关闭红灯*/
+ 434   4                                                      {
+ 435   5                                                              Uart_SendCMD(0x0f,0x00,0x05,0x0e);/*红灯已关闭*/
+ 436   5                                                              delay800ms();
+ 437   5                                                              En_Blu;
+ 438   5                                                              delay50ms();
+ 439   5                                                              Uart_SendBlue(0x30,0x31,0x38);/*关闭红灯*/
+ 440   5                                                              En_Mp3;
+ 441   5                                                              delay50ms();
+ 442   5                                                              while(!busy);
+ 443   5                                                              flag = 0; 
+ 444   5                                                              Uart_SendYuYin(0xaa,0x00,0x00);/*打开识别*/
+ 445   5                                                      }
+ 446   4                                                      if(Recv_buf[1]  == 0x20)/*识别为001组033号：关闭绿灯*/
+ 447   4                                                      {
+ 448   5                                                              Uart_SendCMD(0x0f,0x00,0x05,0x0c);/*绿灯已关闭*/
+ 449   5                                                              delay800ms();
+ 450   5                                                              En_Blu;
+ 451   5                                                              delay50ms();
+ 452   5                                                              Uart_SendBlue(0x30,0x31,0x37);
+ 453   5                                                              En_Mp3;
+ 454   5                                                              delay50ms();
+ 455   5                                                              while(!busy);
+ 456   5                                                              flag = 0; 
+ 457   5                                                              Uart_SendYuYin(0xaa,0x00,0x00);/*打开识别*/
+ 458   5                                                      }
+ 459   4                                                      if(Recv_buf[1]  == 0x1f)/*识别为001组032号：关闭蓝灯*/
+ 460   4                                                      {
+ 461   5                                                              Uart_SendCMD(0x0f,0x00,0x05,0x0a);/*蓝灯已关闭*/
+ 462   5                                                              delay800ms();
+ 463   5                                                              En_Blu;
+ 464   5                                                              delay50ms();
+ 465   5                                                              Uart_SendBlue(0x30,0x31,0x36);
+ 466   5                                                              En_Mp3;
+ 467   5                                                              delay50ms();
+ 468   5                                                              while(!busy);
+ 469   5                                                              flag = 0; 
+ 470   5                                                              Uart_SendYuYin(0xaa,0x00,0x00);/*打开识别*/
+ 471   5                                                      }
+ 472   4                                                      
+ 473   4                                                      if(Recv_buf[1]  == 0x23)/*识别为001组036号：关闭电视*/
+ 474   4                                                      {
+ 475   5                                                              Uart_SendCMD(0x0f,0x00,0x05,0x06);/*电视已关闭*/
+ 476   5                                                              delay800ms();
+ 477   5                                                              En_Blu;
+ 478   5                                                              delay50ms();
+ 479   5                                                              Uart_SendBlue(0x30,0x31,0x34);
+ 480   5                                                              En_Mp3;
+ 481   5                                                              delay50ms();
+ 482   5                                                              while(!busy);
+ 483   5                                                              flag = 0; 
+ 484   5                                                              Uart_SendYuYin(0xaa,0x00,0x00);/*打开识别*/
+ 485   5                                                      }
+ 486   4                                                      if(Recv_buf[1]  == 0x22)/*识别为001组035号：关闭热水器*/
+ 487   4                                                      {
+C51 COMPILER V9.52.0.0   MAIN                                                              02/21/2012 17:16:14 PAGE 9   
+
+ 488   5                                                              Uart_SendCMD(0x0f,0x00,0x05,0x08);/*热水器已关闭*/
+ 489   5                                                              delay800ms();
+ 490   5                                                              En_Blu;
+ 491   5                                                              delay50ms();
+ 492   5                                                              Uart_SendBlue(0x30,0x31,0x35);
+ 493   5                                                              En_Mp3;
+ 494   5                                                              delay50ms();
+ 495   5                                                              while(!busy);
+ 496   5                                                              flag = 0; 
+ 497   5                                                              Uart_SendYuYin(0xaa,0x00,0x00);/*打开识别*/
+ 498   5                                                      }
+ 499   4                                                      else
+ 500   4                                                      {
+ 501   5                                                              Uart_SendYuYin(0xaa,0x00,0x00);/*打开识别*/
+ 502   5                                                      }
+ 503   4      
+ 504   4                                              }break;
+ 505   3                                                      
+ 506   3                              case 1:
+ 507   3                                              if(flag==1)
+ 508   3                                              {
+ 509   4                                                      flag = 0; 
+ 510   4                                              
+ 511   4                                                      if(Recv_buf[1]  == 0x18 )/*识别为天王盖地虎*/
+ 512   4                                                      {
+ 513   5                                                              Uart_SendCMD(0x0f,0x00,0x02,0x27);/*煎饼两块五*/ 
+ 514   5                                                              delay800ms();
+ 515   5                                                              while(!busy);
+ 516   5                                                              Uart_SendYuYin(0xaa,0x00,0x00);/*打开识别*/
+ 517   5                                                              while(1)
+ 518   5                                                              {
+ 519   6                                                                      if(flag==1)
+ 520   6                                                                      {
+ 521   7                                                                              flag = 0; 
+ 522   7                                                                      
+ 523   7                                                                              if(Recv_buf[1]  == 0x00 )/*识别为001组001号：你好*/
+ 524   7                                                                              {
+ 525   8                                                                                      Uart_SendCMD(0x0f,0x00,0x02,0x04);/*你好呀*/ 
+ 526   8                                                                                      delay800ms();
+ 527   8                                                                                      while(!busy);
+ 528   8                                                                                      flag = 0; 
+ 529   8                                                                                      Uart_SendYuYin(0xaa,0x00,0x00);/*打开识别*/
+ 530   8                                                                                      break;
+ 531   8                                                                              }
+ 532   7                                                                              
+ 533   7                                                                              if(Recv_buf[1]  == 0x01 )/*识别为001组002号：你叫什么名字*/
+ 534   7                                                                              {
+ 535   8                                                                                      Uart_SendCMD(0x0f,0x00,0x02,0x0c);/*我叫小溪*/
+ 536   8                                                                                      delay800ms();
+ 537   8                                                                                      while(!busy);
+ 538   8                                                                                      flag = 0; 
+ 539   8                                                                                      Uart_SendYuYin(0xaa,0x00,0x00);/*打开识别*/
+ 540   8                                                                                      break;
+ 541   8                                                                              }
+ 542   7                                                                              
+ 543   7                                                                              if(Recv_buf[1]  == 0x02 )/*识别为001组003号：你的主人是谁*/
+ 544   7                                                                              {
+ 545   8                                                                                      Uart_SendCMD(0x0f,0x00,0x02,0x0d);/*我的主人是马攀*/
+ 546   8                                                                                      delay800ms();
+ 547   8                                                                                      while(!busy);
+ 548   8                                                                                      flag = 0; 
+ 549   8                                                                                      Uart_SendYuYin(0xaa,0x00,0x00);/*打开识别*/
+C51 COMPILER V9.52.0.0   MAIN                                                              02/21/2012 17:16:14 PAGE 10  
+
+ 550   8                                                                                      break;
+ 551   8                                                                              }
+ 552   7                                                                              
+ 553   7                                                                              if(Recv_buf[1]  == 0x03 )/*识别为001组004号：你是谁*/
+ 554   7                                                                              {
+ 555   8                                                                                      Uart_SendCMD(0x0f,0x00,0x02,0x01);/*我是智能家居助手小溪*/
+ 556   8                                                                                      delay800ms();
+ 557   8                                                                                      while(!busy);
+ 558   8                                                                                      flag = 0; 
+ 559   8                                                                                      Uart_SendYuYin(0xaa,0x00,0x00);/*打开识别*/
+ 560   8                                                                                      break;
+ 561   8                                                                              }
+ 562   7                                                                              
+ 563   7                                                                              if(Recv_buf[1]  == 0x04 )/*识别为001组005号：你太傻了*/
+ 564   7                                                                              {
+ 565   8                                                                                      Uart_SendCMD(0x0f,0x00,0x02,0x06);/*你说什么我没带眼镜听不清*/
+ 566   8                                                                                      delay800ms();
+ 567   8                                                                                      while(!busy);
+ 568   8                                                                                      flag = 0; 
+ 569   8                                                                                      Uart_SendYuYin(0xaa,0x00,0x00);/*打开识别*/
+ 570   8                                                                                      break;
+ 571   8                                                                              }
+ 572   7                                                                              
+ 573   7                                                                              if(Recv_buf[1]  == 0x05 )/*识别为001组006号：1+1等于几*/
+ 574   7                                                                              {
+ 575   8                                                                                      Uart_SendCMD(0x0f,0x00,0x02,0x0e);/*一加一等于二*/
+ 576   8                                                                                      delay800ms();
+ 577   8                                                                                      while(!busy);
+ 578   8                                                                                      flag = 0; 
+ 579   8                                                                                      Uart_SendYuYin(0xaa,0x00,0x00);/*打开识别*/
+ 580   8                                                                                      break;
+ 581   8                                                                              }
+ 582   7                                                                              
+ 583   7                                                                              if(Recv_buf[1]  == 0x06 )/*识别为001组007号：你几岁了*/
+ 584   7                                                                              {
+ 585   8                                                                                      Uart_SendCMD(0x0f,0x00,0x02,0x05);/*我今年一岁了*/
+ 586   8                                                                                      delay800ms();
+ 587   8                                                                                      while(!busy);
+ 588   8                                                                                      flag = 0; 
+ 589   8                                                                                      Uart_SendYuYin(0xaa,0x00,0x00);/*打开识别*/
+ 590   8                                                                                      break;
+ 591   8                                                                              }
+ 592   7                                                                              
+ 593   7                                                                              if(Recv_buf[1]  == 0x07 )/*识别为001组008号：你家在哪里*/
+ 594   7                                                                              {
+ 595   8                                                                                      Uart_SendCMD(0x0f,0x00,0x02,0x08);/*我来自郑州大学西亚斯国际学院*/
+ 596   8                                                                                      delay800ms();
+ 597   8                                                                                      while(!busy);
+ 598   8                                                                                      flag = 0; 
+ 599   8                                                                                      Uart_SendYuYin(0xaa,0x00,0x00);/*打开识别*/
+ 600   8                                                                                      break;
+ 601   8                                                                              }
+ 602   7                                                                              if(Recv_buf[1]  == 0x08 )/*识别为001组009号：你很聪明呀*/
+ 603   7                                                                              {
+ 604   8                                                                                      Uart_SendCMD(0x0f,0x00,0x02,0x0b);/*我也这么觉得*/
+ 605   8                                                                                      delay800ms();
+ 606   8                                                                                      while(!busy);
+ 607   8                                                                                      flag = 0; 
+ 608   8                                                                                      Uart_SendYuYin(0xaa,0x00,0x00);/*打开识别*/
+ 609   8                                                                                      break;
+ 610   8                                                                              }
+ 611   7                                                                              if(Recv_buf[1]  == 0x09)/*识别为001组010号：你会游泳吗*/
+C51 COMPILER V9.52.0.0   MAIN                                                              02/21/2012 17:16:14 PAGE 11  
+
+ 612   7                                                                              {
+ 613   8                                                                                      Uart_SendCMD(0x0f,0x00,0x02,0x0a);/*我当然会游泳啦*/
+ 614   8                                                                                      delay800ms();
+ 615   8                                                                                      while(!busy);
+ 616   8                                                                                      flag = 0; 
+ 617   8                                                                                      Uart_SendYuYin(0xaa,0x00,0x00);/*打开识别*/
+ 618   8                                                                                      break;
+ 619   8                                                                              }
+ 620   7                                                                              if(Recv_buf[1]  == 0x0a)/*识别为001组011号：我要拆了你*/
+ 621   7                                                                              {
+ 622   8                                                                                      Uart_SendCMD(0x0f,0x00,0x02,0x06);/*我当然会游泳啦*/
+ 623   8                                                                                      delay800ms();
+ 624   8                                                                                      while(!busy);
+ 625   8                                                                                      flag = 0; 
+ 626   8                                                                                      Uart_SendYuYin(0xaa,0x00,0x00);/*打开识别*/
+ 627   8                                                                                      break;
+ 628   8                                                                              }
+ 629   7                                                                              if(Recv_buf[1]  == 0x0b)/*识别为001组012号：唱首歌吧*/
+ 630   7                                                                              {
+ 631   8                                                                                      Uart_SendCMD(0x0f,0x00,0x02,0x26);/*小螺号*/
+ 632   8                                                                                      delay800ms();
+ 633   8                                                                                      while(!busy);
+ 634   8                                                                                      flag = 0; 
+ 635   8                                                                                      Uart_SendYuYin(0xaa,0x00,0x00);/*打开识别*/
+ 636   8                                                                                      break;
+ 637   8                                                                              }
+ 638   7                                                                              if(Recv_buf[1]  == 0x0c)/*识别为001组013号：说话小点声*/
+ 639   7                                                                              {
+ 640   8                                                                                      Uart_SendCMD(0x06,0x00,0x00,0x0a);
+ 641   8                                                                                      delay50ms();
+ 642   8                                                                                      Uart_SendCMD(0x0f,0x00,0x02,0x07);/*好的主人*/
+ 643   8                                                                                      delay800ms();
+ 644   8                                                                                      while(!busy);
+ 645   8                                                                                      flag = 0; 
+ 646   8                                                                                      Uart_SendYuYin(0xaa,0x00,0x00);/*打开识别*/
+ 647   8                                                                                      break;
+ 648   8                                                                              }
+ 649   7                                                                              if(Recv_buf[1]  == 0x0d)/*识别为001组014号：说话大点声*/
+ 650   7                                                                              {
+ 651   8                                                                                      Uart_SendCMD(0x06,0x00,0x00,0x12);/*设置音量为20*/
+ 652   8                                                                                      delay50ms();
+ 653   8                                                                                      Uart_SendCMD(0x0f,0x00,0x02,0x07);/*好的主人*/
+ 654   8                                                                                      delay800ms();
+ 655   8                                                                                      while(!busy);
+ 656   8                                                                                      flag = 0; 
+ 657   8                                                                                      Uart_SendYuYin(0xaa,0x00,0x00);/*打开识别*/
+ 658   8                                                                                      break;
+ 659   8                                                                              }
+ 660   7                                                                              if(Recv_buf[1]  == 0x10)/*识别为001组017号：背首诗歌*/
+ 661   7                                                                              {
+ 662   8                                                                                      poem++;
+ 663   8                                                                                      if(poem>34)
+ 664   8                                                                                              poem = 17;
+ 665   8                                                                                      Uart_SendCMD(0x0f,0x00,0x02,poem);/*好的主人*/
+ 666   8                                                                                      delay800ms();
+ 667   8                                                                                      while(!busy);
+ 668   8                                                                                      flag = 0; 
+ 669   8                                                                                      Uart_SendYuYin(0xaa,0x00,0x00);/*打开识别*/
+ 670   8                                                                                      break;
+ 671   8                                                                              }
+ 672   7                                                                              /**/
+ 673   7                                                                              if(Recv_buf[1]  == 0x11)/*识别为001组018号：打开台灯*/
+C51 COMPILER V9.52.0.0   MAIN                                                              02/21/2012 17:16:14 PAGE 12  
+
+ 674   7                                                                              {
+ 675   8                                                                                      Uart_SendCMD(0x0f,0x00,0x05,0x03);/*台灯已打开*/
+ 676   8                                                                                      delay800ms();
+ 677   8                                                                                      En_Blu;
+ 678   8                                                                                      delay50ms();
+ 679   8                                                                                      Uart_SendBlue(0x31,0x31,0x33);/*打开台灯*/
+ 680   8                                                                                      En_Mp3;
+ 681   8                                                                                      delay50ms();
+ 682   8                                                                                      while(!busy);
+ 683   8                                                                                      flag = 0; 
+ 684   8                                                                                      Uart_SendYuYin(0xaa,0x00,0x00);/*打开识别*/
+ 685   8                                                                                      break;
+ 686   8                                                                              }
+ 687   7                                                                              if(Recv_buf[1]  == 0x12)/*识别为001组019号：打开风扇*/
+ 688   7                                                                              {
+ 689   8                                                                                      Uart_SendCMD(0x0f,0x00,0x05,0x01);/*风扇已打开*/
+ 690   8                                                                                      delay800ms();
+ 691   8                                                                                      En_Blu;
+ 692   8                                                                                      delay50ms();
+ 693   8                                                                                      Uart_SendBlue(0x31,0x31,0x32);
+ 694   8                                                                                      En_Mp3;
+ 695   8                                                                                      delay50ms();
+ 696   8                                                                                      while(!busy);
+ 697   8                                                                                      flag = 0; 
+ 698   8                                                                                      Uart_SendYuYin(0xaa,0x00,0x00);/*打开识别*/
+ 699   8                                                                                      break;
+ 700   8                                                                              }
+ 701   7                                                                              if(Recv_buf[1]  == 0x1b)/*识别为001组028号：打开红灯*/
+ 702   7                                                                              {
+ 703   8                                                                                      Uart_SendCMD(0x0f,0x00,0x05,0x0d);/*红灯已打开*/
+ 704   8                                                                                      delay800ms();
+ 705   8                                                                                      En_Blu;
+ 706   8                                                                                      delay50ms();
+ 707   8                                                                                      Uart_SendBlue(0x31,0x31,0x38);/*打开红灯*/
+ 708   8                                                                                      En_Mp3;
+ 709   8                                                                                      delay50ms();
+ 710   8                                                                                      while(!busy);
+ 711   8                                                                                      flag = 0; 
+ 712   8                                                                                      Uart_SendYuYin(0xaa,0x00,0x00);/*打开识别*/
+ 713   8                                                                                      break;
+ 714   8                                                                              }
+ 715   7                                                                              if(Recv_buf[1]  == 0x1d)/*识别为001组030号：打开绿灯*/
+ 716   7                                                                              {
+ 717   8                                                                                      Uart_SendCMD(0x0f,0x00,0x05,0x0b);/*绿灯已打开*/
+ 718   8                                                                                      delay800ms();
+ 719   8                                                                                      En_Blu;
+ 720   8                                                                                      delay50ms();
+ 721   8                                                                                      Uart_SendBlue(0x31,0x31,0x37);
+ 722   8                                                                                      En_Mp3;
+ 723   8                                                                                      delay50ms();
+ 724   8                                                                                      while(!busy);
+ 725   8                                                                                      flag = 0; 
+ 726   8                                                                                      Uart_SendYuYin(0xaa,0x00,0x00);/*打开识别*/
+ 727   8                                                                                      break;
+ 728   8                                                                              }
+ 729   7                                                                              if(Recv_buf[1]  == 0x1c)/*识别为001组029号：打开蓝灯*/
+ 730   7                                                                              {
+ 731   8                                                                                      Uart_SendCMD(0x0f,0x00,0x05,0x09);/*好的主人*/
+ 732   8                                                                                      delay800ms();
+ 733   8                                                                                      En_Blu;
+ 734   8                                                                                      delay50ms();
+ 735   8                                                                                      Uart_SendBlue(0x31,0x31,0x36);
+C51 COMPILER V9.52.0.0   MAIN                                                              02/21/2012 17:16:14 PAGE 13  
+
+ 736   8                                                                                      En_Mp3;
+ 737   8                                                                                      delay50ms();
+ 738   8                                                                                      while(!busy);
+ 739   8                                                                                      flag = 0; 
+ 740   8                                                                                      Uart_SendYuYin(0xaa,0x00,0x00);/*打开识别*/
+ 741   8                                                                                      break;
+ 742   8                                                                              }
+ 743   7                                                                              
+ 744   7                                                                              if(Recv_buf[1]  == 0x24)/*识别为001组037号：打开电视*/
+ 745   7                                                                              {
+ 746   8                                                                                      Uart_SendCMD(0x0f,0x00,0x05,0x05);/*好的主人*/
+ 747   8                                                                                      delay800ms();
+ 748   8                                                                                      En_Blu;
+ 749   8                                                                                      delay50ms();
+ 750   8                                                                                      Uart_SendBlue(0x31,0x31,0x34);
+ 751   8                                                                                      En_Mp3;
+ 752   8                                                                                      delay50ms();
+ 753   8                                                                                      while(!busy);
+ 754   8                                                                                      flag = 0; 
+ 755   8                                                                                      Uart_SendYuYin(0xaa,0x00,0x00);/*打开识别*/
+ 756   8                                                                                      break;
+ 757   8                                                                              }
+ 758   7                                                                              if(Recv_buf[1]  == 0x21)/*识别为001组034号：打开热水器*/
+ 759   7                                                                              {
+ 760   8                                                                                      Uart_SendCMD(0x0f,0x00,0x05,0x07);/*热水器已打开*/
+ 761   8                                                                                      delay800ms();
+ 762   8                                                                                      En_Blu;
+ 763   8                                                                                      delay50ms();
+ 764   8                                                                                      Uart_SendBlue(0x31,0x31,0x35);
+ 765   8                                                                                      En_Mp3;
+ 766   8                                                                                      delay50ms();
+ 767   8                                                                                      while(!busy);
+ 768   8                                                                                      flag = 0; 
+ 769   8                                                                                      Uart_SendYuYin(0xaa,0x00,0x00);/*打开识别*/
+ 770   8                                                                                      break;
+ 771   8                                                                              }
+ 772   7                                                                              /**/
+ 773   7                                                                              if(Recv_buf[1]  == 0x1a)/*识别为001组027号：关闭台灯*/
+ 774   7                                                                              {
+ 775   8                                                                                      Uart_SendCMD(0x0f,0x00,0x05,0x04);/*台灯已关闭*/
+ 776   8                                                                                      delay800ms();
+ 777   8                                                                                      En_Blu;
+ 778   8                                                                                      delay50ms();
+ 779   8                                                                                      Uart_SendBlue(0x30,0x31,0x33);/*关闭台灯*/
+ 780   8                                                                                      En_Mp3;
+ 781   8                                                                                      delay50ms();
+ 782   8                                                                                      while(!busy);
+ 783   8                                                                                      flag = 0; 
+ 784   8                                                                                      Uart_SendYuYin(0xaa,0x00,0x00);/*打开识别*/
+ 785   8                                                                                      break;
+ 786   8                                                                              }
+ 787   7                                                                              if(Recv_buf[1]  == 0x19)/*识别为001组026号：关闭风扇*/
+ 788   7                                                                              {
+ 789   8                                                                                      Uart_SendCMD(0x0f,0x00,0x05,0x02);/*风扇已关闭*/
+ 790   8                                                                                      delay800ms();
+ 791   8                                                                                      En_Blu;
+ 792   8                                                                                      delay50ms();
+ 793   8                                                                                      Uart_SendBlue(0x30,0x31,0x32);
+ 794   8                                                                                      En_Mp3;
+ 795   8                                                                                      delay50ms();
+ 796   8                                                                                      while(!busy);
+ 797   8                                                                                      flag = 0; 
+C51 COMPILER V9.52.0.0   MAIN                                                              02/21/2012 17:16:14 PAGE 14  
+
+ 798   8                                                                                      Uart_SendYuYin(0xaa,0x00,0x00);/*打开识别*/
+ 799   8                                                                                      break;
+ 800   8                                                                              }
+ 801   7                                                                              if(Recv_buf[1]  == 0x1e)/*识别为001组031号：关闭红灯*/
+ 802   7                                                                              {
+ 803   8                                                                                      Uart_SendCMD(0x0f,0x00,0x05,0x0e);/*红灯已关闭*/
+ 804   8                                                                                      delay800ms();
+ 805   8                                                                                      En_Blu;
+ 806   8                                                                                      delay50ms();
+ 807   8                                                                                      Uart_SendBlue(0x30,0x31,0x38);/*关闭红灯*/
+ 808   8                                                                                      En_Mp3;
+ 809   8                                                                                      delay50ms();
+ 810   8                                                                                      while(!busy);
+ 811   8                                                                                      flag = 0; 
+ 812   8                                                                                      Uart_SendYuYin(0xaa,0x00,0x00);/*打开识别*/
+ 813   8                                                                                      break;
+ 814   8                                                                              }
+ 815   7                                                                              if(Recv_buf[1]  == 0x20)/*识别为001组033号：关闭绿灯*/
+ 816   7                                                                              {
+ 817   8                                                                                      Uart_SendCMD(0x0f,0x00,0x05,0x0c);/*绿灯已关闭*/
+ 818   8                                                                                      delay800ms();
+ 819   8                                                                                      En_Blu;
+ 820   8                                                                                      delay50ms();
+ 821   8                                                                                      Uart_SendBlue(0x30,0x31,0x37);
+ 822   8                                                                                      En_Mp3;
+ 823   8                                                                                      delay50ms();
+ 824   8                                                                                      while(!busy);
+ 825   8                                                                                      flag = 0; 
+ 826   8                                                                                      Uart_SendYuYin(0xaa,0x00,0x00);/*打开识别*/
+ 827   8                                                                                      break;
+ 828   8                                                                              }
+ 829   7                                                                              if(Recv_buf[1]  == 0x1f)/*识别为001组032号：关闭蓝灯*/
+ 830   7                                                                              {
+ 831   8                                                                                      Uart_SendCMD(0x0f,0x00,0x05,0x0a);/*蓝灯已关闭*/
+ 832   8                                                                                      delay800ms();
+ 833   8                                                                                      En_Blu;
+ 834   8                                                                                      delay50ms();
+ 835   8                                                                                      Uart_SendBlue(0x30,0x31,0x36);
+ 836   8                                                                                      En_Mp3;
+ 837   8                                                                                      delay50ms();
+ 838   8                                                                                      while(!busy);
+ 839   8                                                                                      flag = 0; 
+ 840   8                                                                                      Uart_SendYuYin(0xaa,0x00,0x00);/*打开识别*/
+ 841   8                                                                                      break;
+ 842   8                                                                              }
+ 843   7                                                                              
+ 844   7                                                                              if(Recv_buf[1]  == 0x23)/*识别为001组036号：关闭电视*/
+ 845   7                                                                              {
+ 846   8                                                                                      Uart_SendCMD(0x0f,0x00,0x05,0x06);/*电视已关闭*/
+ 847   8                                                                                      delay800ms();
+ 848   8                                                                                      En_Blu;
+ 849   8                                                                                      delay50ms();
+ 850   8                                                                                      Uart_SendBlue(0x30,0x31,0x34);
+ 851   8                                                                                      En_Mp3;
+ 852   8                                                                                      delay50ms();
+ 853   8                                                                                      while(!busy);
+ 854   8                                                                                      flag = 0; 
+ 855   8                                                                                      Uart_SendYuYin(0xaa,0x00,0x00);/*打开识别*/
+ 856   8                                                                                      break;
+ 857   8                                                                              }
+ 858   7                                                                              if(Recv_buf[1]  == 0x22)/*识别为001组035号：关闭热水器*/
+ 859   7                                                                              {
+C51 COMPILER V9.52.0.0   MAIN                                                              02/21/2012 17:16:14 PAGE 15  
+
+ 860   8                                                                                      Uart_SendCMD(0x0f,0x00,0x05,0x08);/*热水器已关闭*/
+ 861   8                                                                                      delay800ms();
+ 862   8                                                                                      En_Blu;
+ 863   8                                                                                      delay50ms();
+ 864   8                                                                                      Uart_SendBlue(0x30,0x31,0x35);
+ 865   8                                                                                      En_Mp3;
+ 866   8                                                                                      delay50ms();
+ 867   8                                                                                      while(!busy);
+ 868   8                                                                                      flag = 0; 
+ 869   8                                                                                      Uart_SendYuYin(0xaa,0x00,0x00);/*打开识别*/
+ 870   8                                                                                      break;
+ 871   8                                                                              }
+ 872   7                                                                                                                                              
+ 873   7                                                                              else
+ 874   7                                                                                      break;
+ 875   7      
+ 876   7                                                                      }
+ 877   6                                                              }
+ 878   5                                                              
+ 879   5                                                      }
+ 880   4                                                      else
+ 881   4                                                      {
+ 882   5                                                              Uart_SendCMD(0x0f,0x00,0x02,0x28);/*请说出正确口令*/ 
+ 883   5                                                              delay800ms();
+ 884   5                                                              while(!busy);
+ 885   5                                                              Uart_SendYuYin(0xaa,0x00,0x00);/*打开识别*/
+ 886   5                                                      }
+ 887   4                                                      
+ 888   4                                              }
+ 889   3                                              break;
+ 890   3      
+ 891   3                              case 2:
+ 892   3                                      {
+ 893   4                                              cache = BCD2HEX(read_random(0x06));
+ 894   4                                              Uart_SendCMD(0x0f,0x00,0x06,cache);/*年份*/
+ 895   4                                              delay800ms();
+ 896   4                                              cache = BCD2HEX(read_random(0x05));
+ 897   4                                              while(!busy);
+ 898   4                              
+ 899   4                                              
+ 900   4                                              Uart_SendCMD(0x0f,0x00,0x08,cache);/*月份*/
+ 901   4                                              delay800ms();
+ 902   4                                              cache = BCD2HEX(read_random(0x04));
+ 903   4                                              while(!busy);
+ 904   4                              
+ 905   4                                              
+ 906   4                                              Uart_SendCMD(0x0f,0x00,0x09,cache);/*日期*/
+ 907   4                                              delay800ms();
+ 908   4                                              cache = BCD2HEX(read_random(0x03));
+ 909   4                                              while(!busy);
+ 910   4                              
+ 911   4                                              
+ 912   4                                              Uart_SendCMD(0x0f,0x00,0x07,cache);/*星期*/
+ 913   4                                              delay800ms();
+ 914   4                                              cache = BCD2HEX(read_random(0x02));
+ 915   4                                              if(cache == 0)cache = 24;/*0点即是24点*/
+ 916   4                                              while(!busy);
+ 917   4                              
+ 918   4                                              
+ 919   4                                              Uart_SendCMD(0x0f,0x00,0x0a,cache);/*小时*/
+ 920   4                                              delay800ms();
+ 921   4                                              cache = BCD2HEX(read_random(0x01));
+C51 COMPILER V9.52.0.0   MAIN                                                              02/21/2012 17:16:14 PAGE 16  
+
+ 922   4                                              if(cache == 0)cache = 60;/*零分即是整点*/
+ 923   4                                              while(!busy);
+ 924   4                              
+ 925   4                                              
+ 926   4                                              Uart_SendCMD(0x0f,0x00,0x0b,cache);/*分钟*/
+ 927   4                                              delay800ms();
+ 928   4                                              while(!busy);
+ 929   4                                              
+ 930   4                                              Uart_SendCMD(0x0f,0x00,0x01,0xa9);/*温度*/
+ 931   4                                              delay800ms();
+ 932   4                                              cache = read_random(0x11);
+ 933   4                                              while(!busy);
+ 934   4                                              
+ 935   4                                              if(cache>127)
+ 936   4                                              {
+ 937   5                                                      Uart_SendCMD(0x0f,0x00,0x01,0xb4);/*零下*/
+ 938   5                                                      delay800ms();
+ 939   5                                                      while(!busy);
+ 940   5                                                      Uart_SendCMD(0x0f,0x00,0x01,(~cache+1));/*温度*/
+ 941   5                                                      delay800ms();
+ 942   5                                                      while(!busy);
+ 943   5                                              }
+ 944   4                                              else
+ 945   4                                              {
+ 946   5                                                      Uart_SendCMD(0x0f,0x00,0x01,cache);/*温度*/
+ 947   5                                                      delay800ms();
+ 948   5                                                      while(!busy);
+ 949   5                                              }
+ 950   4                                              
+ 951   4                                              Uart_SendCMD(0x0f,0x00,0x01,0xaa);/*摄氏度*/
+ 952   4                                              delay800ms();
+ 953   4                                              while(!busy);
+ 954   4                                              
+ 955   4                                              
+ 956   4                                              Uart_SendYuYin(0xaa,0x00,0x00);/*打开识别*/
+ 957   4                                              flag = 0;
+ 958   4                                              mode = 0;
+ 959   4                                      }
+ 960   3                                              break;
+ 961   3                                              
+ 962   3                              default:
+ 963   3                                              break;
+ 964   3                      }
+ 965   2                      
+ 966   2              }
+ 967   1      }
+ 968          /************串行口1中断处理函数*************/
+ 969          void UART_1Interrupt () interrupt 4
+ 970          {
+ 971   1              uchar i;
+ 972   1              if(RI == 1) 
+ 973   1              {  //如果收到.  
+ 974   2                      RI = 0;      //清除标志.   
+ 975   2                      Recv_buf[i] = SBUF;  //接收.
+ 976   2                      i++; 
+ 977   2                      if(Recv_buf[i-3]==0x5a)  /*当i=3时候，Recv_buf[0]=0x5a,收到正确数据flag置1*/
+ 978   2                      {
+ 979   3                              i = 0;
+ 980   3                              flag=1;
+ 981   3                      }
+ 982   2                      
+ 983   2              }
+C51 COMPILER V9.52.0.0   MAIN                                                              02/21/2012 17:16:14 PAGE 17  
+
+ 984   1      }  
+ 985          
+ 986          /************串行口2中断处理函数*************/
+ 987          void UART_2Interrupt() interrupt 8
+ 988          {
+ 989   1              uchar temp2;
+ 990   1              if(S2CON&S2RI)
+ 991   1              {
+ 992   2                      S2CON&=~S2RI;
+ 993   2                      temp2=S2BUF;
+ 994   2              }
+ 995   1      }
+ 996          
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   4180    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =     22       6
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

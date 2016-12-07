@@ -1,0 +1,1132 @@
+C51 COMPILER V9.52.0.0   FIRST                                                             01/02/2017 15:07:14 PAGE 1   
+
+
+C51 COMPILER V9.52.0.0, COMPILATION OF MODULE FIRST
+OBJECT MODULE PLACED IN first.OBJ
+COMPILER INVOKED BY: C:\Keil_v5\C51\BIN\C51.EXE first.c BROWSE DEBUG OBJECTEXTEND
+
+line level    source
+
+   1          #include "stc12c5axx.h"
+   2          #include <intrins.h>
+   3          #define uchar unsigned char
+   4          #define uint unsigned int
+   5          
+   6          //#define S2RI 0x01     //串口2接收中断请求标志位
+   7          //#define S2TI 0x02     //串口2发送中断请求标志位
+   8          
+   9          sbit rs=P1^4;//寄存器选择
+  10          sbit rw=P1^5;//读写信号线
+  11          sbit lcden=P1^6;//led使能端
+  12          /*定义继电器*/
+  13          sbit relay1 = P2^4;
+  14          sbit relay2 = P2^5;
+  15          sbit relay3 = P2^6;
+  16          sbit relay4 = P2^7;
+  17          
+  18          /*定义LED*/
+  19          sbit LED1 = P3^5;
+  20          sbit LED2 = P3^6;
+  21          sbit LED3 = P3^7;
+  22          
+  23          /*DS1302接口*/
+  24          sbit rst=P3^2;//复位线
+  25          sbit io=P3^3;//数据口
+  26          sbit scl=P3^4;//时钟线
+  27          
+  28          /*按键接口*/
+  29          sbit key_set_time=P2^3;//设置时间键
+  30          sbit key_add=P2^1;//加键
+  31          sbit key_minus=P2^2;//减键
+  32          sbit key_set_alarm=P2^0;//设置闹钟键
+  33          
+  34          sbit bee=P1^1;//蜂鸣器接口
+  35          sbit dq=P1^0;//ds18b20测温
+  36          
+  37          uchar getTimebuf[7];//存放时间数据
+  38          uchar time[]={"  :  :  "};//时间格式字符串
+  39          uchar date[]={"20  -  -  "};//日期格式字符串
+  40          uchar weeklist[]={"MONTUEWEDTHUFRISATSUN"};//星期字符列表
+  41          uchar week[]={"   "};//星期格式字符串
+  42          /*串口接受和发送*/
+  43          static uchar Send_buf[10] = {0} ;
+  44          static uchar Recv_buf[10] = {0} ;
+  45          
+  46          int count;//设定秒分时日月星期年的时候count的值分别为1235647
+  47          int alarm;//是否进入闹钟设置界面 123分别代表开关 分 小时的设置
+  48          int isOpen;//闹钟是否开启  默认不开启
+  49          int fen,shi;//闹钟的分钟小时
+  50          int isRing;//闹钟是否在响
+  51          
+  52          uchar isInit_1302;//是否初始化时钟完毕
+  53          uchar flag,k;//蓝牙接收标志位
+  54          int num;
+  55          int temperature;//温度
+C51 COMPILER V9.52.0.0   FIRST                                                             01/02/2017 15:07:14 PAGE 2   
+
+  56          int temp_flag;//温度正负标志
+  57          
+  58          void UartInit(void)             //9600bps@22.1184MHz
+  59          {
+  60   1              PCON &= 0x7F;           //波特率不倍速
+  61   1              SCON = 0x50;            //8位数据,可变波特率
+  62   1              AUXR |= 0x04;           //独立波特率发生器时钟为Fosc,即1T
+  63   1              BRT = 0xB8;             //设定独立波特率发生器重装值
+  64   1              AUXR |= 0x01;           //串口1选择独立波特率发生器为波特率发生器
+  65   1              AUXR |= 0x10;           //启动独立波特率发生器
+  66   1              ES = 1;
+  67   1              REN = 1;
+  68   1              EA = 1;
+  69   1      }
+  70          void delay(uint x){
+  71   1              int y;
+  72   1              while(x--){
+  73   2                      for(y=100;y>0;y--);
+  74   2              }
+  75   1      }
+  76          void write_1602com(uchar com){
+  77   1              //1602写指令
+  78   1              rs=0;
+  79   1              lcden=0;
+  80   1              P0=com;
+  81   1              delay(5);
+  82   1              lcden=1;
+  83   1              delay(5);
+  84   1              lcden=0;
+  85   1      }
+  86          void write_1602data(uchar dat){
+  87   1              //1602写数据
+  88   1              rs=1;
+  89   1              lcden=0;
+  90   1              P0=dat;
+  91   1              delay(5);
+  92   1              lcden=1;
+  93   1              delay(5);
+  94   1              lcden=0;
+  95   1      }
+  96          void init_1602(){
+  97   1              //初始化1602液晶
+  98   1              rw=0;
+  99   1              lcden=0;
+ 100   1              write_1602com(0x38);//设置显示模式
+ 101   1              write_1602com(0x0c);//显示开关及光标是否显示和闪动
+ 102   1              write_1602com(0x06);//光标移动方向
+ 103   1              write_1602com(0x01);//清屏
+ 104   1      }
+ 105          void write_ds1302_byte(uchar temp){
+ 106   1              //ds1302写一个字节数据
+ 107   1              uchar i;
+ 108   1              for(i=0;i<8;i++){
+ 109   2                      io=temp&0x01;//将数据放到IO口上
+ 110   2                      scl=0;//scl为低时准备数据
+ 111   2                      scl=1;//上升沿写入
+ 112   2                      temp>>=1;
+ 113   2              }
+ 114   1      }
+ 115          void write_ds1302(uchar add,uchar dat){
+ 116   1              //向地址add写入数据dat
+ 117   1              rst=0;
+C51 COMPILER V9.52.0.0   FIRST                                                             01/02/2017 15:07:14 PAGE 3   
+
+ 118   1              scl=0;
+ 119   1              rst=1;
+ 120   1              write_ds1302_byte(add);
+ 121   1              write_ds1302_byte(dat);
+ 122   1              scl=1;
+ 123   1              rst=0;
+ 124   1      }
+ 125          uchar read_ds1302(uchar add){
+ 126   1              //ds1302读数据
+ 127   1              uchar i,dat;
+ 128   1              rst=0;
+ 129   1              scl=0;
+ 130   1              rst=1;
+ 131   1              write_ds1302_byte(add);//首先写入要读的数据处的地址
+ 132   1              for(i=0;i<8;i++){
+ 133   2                      if(io==1){
+ 134   3                              dat|=0x80;
+ 135   3                      }
+ 136   2                      scl=1;
+ 137   2                      scl=0;//下降沿读取数据
+ 138   2                      dat>>=1;
+ 139   2              }
+ 140   1              scl=1;
+ 141   1              rst=0;
+ 142   1              return dat;
+ 143   1      }
+ 144          void read_time(uchar curr_time[]){
+ 145   1                uchar i;
+ 146   1                uchar ucAddr = 0x81;
+ 147   1                for (i=0;i<7;i++){
+ 148   2                      curr_time[i] = read_ds1302(ucAddr);//格式为: 秒 分 时 日 月 星期 年 
+ 149   2                      ucAddr += 2;
+ 150   2                }
+ 151   1      }
+ 152          void set_time(uchar *pSecDa){
+ 153   1              //设定时间
+ 154   1              uchar i;
+ 155   1              uchar ucAddr = 0x80;
+ 156   1              write_ds1302(0x8e,0x00);        
+ 157   1              for(i =7;i>0;i--){ 
+ 158   2                      write_ds1302(ucAddr,*pSecDa); //秒 分 时 日 月 星期 年
+ 159   2                      pSecDa++;
+ 160   2                      ucAddr+=2;
+ 161   2              }
+ 162   1              write_ds1302(0x8e,0x80);
+ 163   1      }
+ 164          void init_ds1302(){
+ 165   1              //ds1302初始化
+ 166   1              isInit_1302=read_ds1302(0x81);//读出时钟状态
+ 167   1              if(isInit_1302&0x80){//说明没有初始化
+ 168   2                      write_ds1302(0x8e,0x00);//关闭写保护  以后一直开着
+ 169   2                      write_ds1302(0x90,0xa5); //辅助电源充电命令 一个二极管  一个2K电阻
+ 170   2                      write_ds1302(0x80,0x00);//秒 CH置0 开启时钟
+ 171   2                      write_ds1302(0x82,0x59);//分
+ 172   2                      write_ds1302(0x84,0x10);//时
+ 173   2                      write_ds1302(0x86,0x07);//日
+ 174   2                      write_ds1302(0x88,0x05);//月
+ 175   2                      write_ds1302(0x8a,0x04);//星期
+ 176   2                      write_ds1302(0x8c,0x14);//年
+ 177   2                      write_ds1302(0x8e,0x80);
+ 178   2              }
+ 179   1      }
+C51 COMPILER V9.52.0.0   FIRST                                                             01/02/2017 15:07:14 PAGE 4   
+
+ 180          char int_to_char(int temp){
+ 181   1              //把0到9对应的数字转为字符
+ 182   1              char x='0';
+ 183   1              switch(temp){
+ 184   2                      case 0:x='0';break;
+ 185   2                      case 1:x='1';break;
+ 186   2                      case 2:x='2';break;
+ 187   2                      case 3:x='3';break;
+ 188   2                      case 4:x='4';break;
+ 189   2                      case 5:x='5';break;
+ 190   2                      case 6:x='6';break;
+ 191   2                      case 7:x='7';break;
+ 192   2                      case 8:x='8';break;
+ 193   2                      case 9:x='9';break;
+ 194   2              }
+ 195   1              return x;
+ 196   1      }
+ 197          int ds18b20_read_temp();
+ 198          void display()
+ 199          {
+ 200   1              uchar bai,shi,ge,point,fuhao;
+ 201   1              read_time(getTimebuf);//时时读取时间
+ 202   1          time[6]=(getTimebuf[0])/16+48;//格式化时间秒
+ 203   1          time[7]=(getTimebuf[0])%16+48;
+ 204   1      
+ 205   1          time[3]=(getTimebuf[1])/16+48;//格式化时间分
+ 206   1          time[4]=(getTimebuf[1])%16+48;
+ 207   1      
+ 208   1          time[0]=(getTimebuf[2])/16+48;//格式化时间小时
+ 209   1          time[1]=(getTimebuf[2])%16+48;
+ 210   1      
+ 211   1          date[8]=getTimebuf[3]/16+48;//格式化日期日
+ 212   1          date[9]=getTimebuf[3]%16+48;
+ 213   1      
+ 214   1          date[5]=getTimebuf[4]/16+48;//格式化日期月
+ 215   1          date[6]=getTimebuf[4]%16+48;
+ 216   1      
+ 217   1          date[2]=getTimebuf[6]/16+48;//格式化日期年
+ 218   1          date[3]=getTimebuf[6]%16+48;
+ 219   1      
+ 220   1          week[0]=weeklist[(getTimebuf[5])*3];//格式化星期
+ 221   1          week[1]=weeklist[(getTimebuf[5])*3+1];
+ 222   1          week[2]=weeklist[(getTimebuf[5])*3+2];
+ 223   1              if((getTimebuf[5]%10)*3==21)//轮完了  重新开始
+ 224   1              {
+ 225   2                      week[0]=weeklist[0];
+ 226   2                      week[1]=weeklist[1];
+ 227   2                      week[2]=weeklist[2];
+ 228   2              }
+ 229   1              write_1602com(0x80);
+ 230   1              write_1602data(' ');
+ 231   1              write_1602com(0x81);
+ 232   1              for(num=0;num<10;num++)
+ 233   1                      {
+ 234   2                              write_1602data(date[num]);
+ 235   2                      }
+ 236   1      
+ 237   1              write_1602data(' ');
+ 238   1              for(num=0;num<3;num++)
+ 239   1                      {
+ 240   2                              write_1602data(week[num]);
+ 241   2                      }
+C51 COMPILER V9.52.0.0   FIRST                                                             01/02/2017 15:07:14 PAGE 5   
+
+ 242   1      
+ 243   1              write_1602com(0x80+0x40);
+ 244   1              for(num=0;num<8;num++)
+ 245   1                      {
+ 246   2                              write_1602data(time[num]);
+ 247   2                      }
+ 248   1              
+ 249   1              //显示温度值
+ 250   1              write_1602com(0x80+0x40+8);//设置数据指针
+ 251   1              temperature=ds18b20_read_temp();
+ 252   1              bai=temperature/1000+0x30;
+ 253   1              shi=temperature%1000/100+0x30;
+ 254   1              ge=temperature%100/10+0x30;
+ 255   1              point=temperature%100%10+0x30;
+ 256   1              if(temp_flag==1){//说明为正数  不显示符号位 125.6 25.7两种
+ 257   2                      fuhao=0x20;//显示空白
+ 258   2                      if(bai==0x30){
+ 259   3                              bai=0x20;//如果百位为0  不显示
+ 260   3                              if(shi==0x30){
+ 261   4                                      shi=0x20;//如果百位为0  十位也为0  都不显示
+ 262   4                              }
+ 263   3                      }
+ 264   2                      write_1602data(fuhao);
+ 265   2                      write_1602data(bai);
+ 266   2                      write_1602data(shi);
+ 267   2              }else{
+ 268   2                      fuhao=0x2d;//显示负号  -2.5  -25.8两种
+ 269   2                      write_1602data(0x20);//因为负数最低到55，所以不显示百位
+ 270   2                      if(shi==0x30){  
+ 271   3                              write_1602data(0x20);
+ 272   3                              write_1602data(fuhao);
+ 273   3                      }else{
+ 274   3                              write_1602data(fuhao);
+ 275   3                              write_1602data(shi);
+ 276   3                      }
+ 277   2              }
+ 278   1              write_1602data(ge);
+ 279   1              write_1602data('.');
+ 280   1              write_1602data(point);
+ 281   1              write_1602data(0xdf);
+ 282   1              write_1602data('C');
+ 283   1      }
+ 284          void display_alarm(uchar add,int dat){
+ 285   1              //把设定的时分显示出来
+ 286   1              int x,y;
+ 287   1              x=dat/10;
+ 288   1              y=dat%10;
+ 289   1              write_1602com(add);
+ 290   1              write_1602data(int_to_char(x));
+ 291   1              write_1602com(add+1);//防止写后地址自动向后加一  光标闪烁看不到
+ 292   1              write_1602data(int_to_char(y));
+ 293   1              write_1602com(add+1);
+ 294   1      }
+ 295          void init_alarm(){
+ 296   1              //闹钟设置界面  只有首次进入才执行
+ 297   1              uchar code x[]="SET ALARM";
+ 298   1              uchar i;
+ 299   1              if(alarm==0){
+ 300   2                      write_1602com(0x01);//清屏
+ 301   2                      write_1602com(0x80+3);//设置数据指针
+ 302   2                      for(i=0;i<9;i++){
+ 303   3                              write_1602data(x[i]);
+C51 COMPILER V9.52.0.0   FIRST                                                             01/02/2017 15:07:14 PAGE 6   
+
+ 304   3                      }
+ 305   2                      display_alarm(0x80+0x40+5,shi);//载入闹钟的时分
+ 306   2                      write_1602com(0x80+0x40+7);
+ 307   2                      write_1602data(':');
+ 308   2                      display_alarm(0x80+0x40+8,fen);
+ 309   2                      if(isOpen){//初始化的时候如果已经设定闹钟则显示ON
+ 310   3                              write_1602com(0x80+0x40+13);
+ 311   3                              write_1602data(' ');
+ 312   3                              write_1602data('O');
+ 313   3                              write_1602data('N');
+ 314   3                      }else{
+ 315   3                              write_1602com(0x80+0x40+13);
+ 316   3                              write_1602data('O');
+ 317   3                              write_1602data('F');
+ 318   3                              write_1602data('F');
+ 319   3                      }
+ 320   2              }
+ 321   1      }
+ 322          void key_scan(){
+ 323   1              int i;
+ 324   1              uchar code tips1[]="SET SUCCESS";//闹钟设置成功的提示
+ 325   1              uchar code tips2[]="CANCEL SUCCESS";//取消闹钟的提示
+ 326   1              if(key_set_time==0){//检测是否按下
+ 327   2                      delay(10);//消抖
+ 328   2                      if(key_set_time==0){//再次检测是否按下
+ 329   3                              while(!key_set_time);//检测是否松开
+ 330   3                              delay(10);//延时消抖
+ 331   3                              while(!key_set_time);//再次检测是否松开
+ 332   3                              if(alarm==0){//当没有显示闹钟界面时才显示时间设定
+ 333   4                                      count++;
+ 334   4                                      write_ds1302(0x80,0x80);//让时钟停止
+ 335   4                                      if(count==8){
+ 336   5                                              //继续走时，说明时间已经设定好了
+ 337   5                                              write_1602com(0x0c);//让光标消失
+ 338   5                                              write_ds1302(0x80,0);//让时钟继续
+ 339   5                                              set_time(getTimebuf);//写入新的时间
+ 340   5                                              count=0;
+ 341   5                                              return;
+ 342   5                                      }
+ 343   4                                      switch(count){
+ 344   5                                              case 1:
+ 345   5                                                      write_1602com(0x80+0x40+7);//在秒的位置
+ 346   5                                                      break;
+ 347   5                                              case 2:
+ 348   5                                                      write_1602com(0x80+0x40+4);//在分的位置
+ 349   5                                                      break;
+ 350   5                                              case 3:
+ 351   5                                                      write_1602com(0x80+0x40+1);//在时的位置
+ 352   5                                                      break;
+ 353   5                                              case 4:
+ 354   5                                                      write_1602com(0x80+14);//在星期的位置
+ 355   5                                                      break;
+ 356   5                                              case 5:
+ 357   5                                                      write_1602com(0x80+10);//在日的位置
+ 358   5                                                      break;
+ 359   5                                              case 6:
+ 360   5                                                      write_1602com(0x80+7);//在月的位置
+ 361   5                                                      break;
+ 362   5                                              case 7:
+ 363   5                                                      write_1602com(0x80+4);//在年的位置
+ 364   5                                                      break;
+ 365   5                                      }
+C51 COMPILER V9.52.0.0   FIRST                                                             01/02/2017 15:07:14 PAGE 7   
+
+ 366   4                                      write_1602com(0x0f);//让光标闪烁
+ 367   4                              }
+ 368   3                      }
+ 369   2              }
+ 370   1              if(key_add==0){//检测是否按下
+ 371   2                      delay(10);//消抖
+ 372   2                      if(key_add==0){//再次检测是否按下
+ 373   3                              while(!key_add);//检测是否松开
+ 374   3                              delay(10);//延时消抖
+ 375   3                              while(!key_add);//再次检测是否松开
+ 376   3                              if(count!=0){
+ 377   4                                      switch(count){
+ 378   5                                      case 1:
+ 379   5                                              //在秒的位置
+ 380   5                                              getTimebuf[0]++;
+ 381   5                                              if(getTimebuf[0]==0x5a){
+ 382   6                                                      getTimebuf[0]=0;
+ 383   6                                              }
+ 384   5                                              if(getTimebuf[0]==0x4a){
+ 385   6                                                      getTimebuf[0]=0x50;
+ 386   6                                              }
+ 387   5                                              if(getTimebuf[0]==0x3a){
+ 388   6                                                      getTimebuf[0]=0x40;
+ 389   6                                              }
+ 390   5                                              if(getTimebuf[0]==0x2a){
+ 391   6                                                      getTimebuf[0]=0x30;
+ 392   6                                              }
+ 393   5                                              if(getTimebuf[0]==0x1a){
+ 394   6                                                      getTimebuf[0]=0x20;
+ 395   6                                              }
+ 396   5                                              if(getTimebuf[0]==0x0a){
+ 397   6                                                      getTimebuf[0]=0x10;
+ 398   6                                              }
+ 399   5                                              time[6]=(getTimebuf[0])/16+48;//格式化时间秒
+ 400   5                                              time[7]=(getTimebuf[0])%16+48;
+ 401   5                                              write_1602com(0x80+0x40+6);//在秒的位置
+ 402   5                                              write_1602data(time[6]);
+ 403   5                                              write_1602com(0x80+0x40+7);//在秒的位置
+ 404   5                                              write_1602data(time[7]);
+ 405   5                                              write_1602com(0x80+0x40+7);//让光标在秒的位置闪烁
+ 406   5                                              break;
+ 407   5                                      case 2:
+ 408   5                                              //在分的位置
+ 409   5                                              getTimebuf[1]++;
+ 410   5                                              if(getTimebuf[1]==0x5a){
+ 411   6                                                      getTimebuf[1]=0;
+ 412   6                                              }
+ 413   5                                              if(getTimebuf[1]==0x4a){
+ 414   6                                                      getTimebuf[1]=0x50;
+ 415   6                                              }
+ 416   5                                              if(getTimebuf[1]==0x3a){
+ 417   6                                                      getTimebuf[1]=0x40;
+ 418   6                                              }
+ 419   5                                              if(getTimebuf[1]==0x2a){
+ 420   6                                                      getTimebuf[1]=0x30;
+ 421   6                                              }
+ 422   5                                              if(getTimebuf[1]==0x1a){
+ 423   6                                                      getTimebuf[1]=0x20;
+ 424   6                                              }
+ 425   5                                              if(getTimebuf[1]==0x0a){
+ 426   6                                                      getTimebuf[1]=0x10;
+ 427   6                                              }
+C51 COMPILER V9.52.0.0   FIRST                                                             01/02/2017 15:07:14 PAGE 8   
+
+ 428   5                                              time[3]=(getTimebuf[1])/16+48;//格式化时间分
+ 429   5                                              time[4]=(getTimebuf[1])%16+48;
+ 430   5                                              write_1602com(0x80+0x40+3);//在分的位置
+ 431   5                                              write_1602data(time[3]);
+ 432   5                                              write_1602com(0x80+0x40+4);//在分的位置
+ 433   5                                              write_1602data(time[4]);
+ 434   5                                              write_1602com(0x80+0x40+4);//让光标在分的位置闪烁
+ 435   5                                              break;
+ 436   5                                      case 3:
+ 437   5                                              //在时的位置
+ 438   5                                              getTimebuf[2]++;
+ 439   5                                              if(getTimebuf[2]==0x24){
+ 440   6                                                      getTimebuf[2]=0;
+ 441   6                                              }
+ 442   5                                              if(getTimebuf[2]==0x1a){
+ 443   6                                                      getTimebuf[2]=0x20;
+ 444   6                                              }
+ 445   5                                              if(getTimebuf[2]==0x0a){
+ 446   6                                                      getTimebuf[2]=0x10;
+ 447   6                                              }
+ 448   5                                              time[0]=(getTimebuf[2])/16+48;//格式化时间小时
+ 449   5                                              time[1]=(getTimebuf[2])%16+48;
+ 450   5                                              write_1602com(0x80+0x40+0);//在小时的位置
+ 451   5                                              write_1602data(time[0]);
+ 452   5                                              write_1602com(0x80+0x40+1);
+ 453   5                                              write_1602data(time[1]);
+ 454   5                                              write_1602com(0x80+0x40+1);
+ 455   5                                              break;
+ 456   5                                      case 4:
+ 457   5                                              //在星期的位置
+ 458   5                                              getTimebuf[5]++;
+ 459   5                                              if(getTimebuf[5]==0x08){
+ 460   6                                                      getTimebuf[5]=0x01;
+ 461   6                                              }
+ 462   5                                              if((getTimebuf[5]%10)*3==21){//轮完了  重新开始
+ 463   6                                                      week[0]=weeklist[0];
+ 464   6                                                      week[1]=weeklist[1];
+ 465   6                                                      week[2]=weeklist[2];
+ 466   6                                              }else{
+ 467   6                                                      week[0]=weeklist[(getTimebuf[5]%10)*3];//格式化星期
+ 468   6                                                      week[1]=weeklist[(getTimebuf[5]%10)*3+1];
+ 469   6                                                      week[2]=weeklist[(getTimebuf[5]%10)*3+2];
+ 470   6                                              }
+ 471   5                                              write_1602com(0x80+12);
+ 472   5                                              write_1602data(week[0]);
+ 473   5                                              write_1602com(0x80+13);
+ 474   5                                              write_1602data(week[1]);
+ 475   5                                              write_1602com(0x80+14);
+ 476   5                                              write_1602data(week[2]);
+ 477   5                                              write_1602com(0x80+14);
+ 478   5                                              break;
+ 479   5                                      case 5:
+ 480   5                                              //在日的位置
+ 481   5                                              getTimebuf[3]++;
+ 482   5                                              if(getTimebuf[3]==0x32){
+ 483   6                                                      getTimebuf[3]=0x01;
+ 484   6                                              }
+ 485   5                                              if(getTimebuf[3]==0x2a){
+ 486   6                                                      getTimebuf[3]=0x30;
+ 487   6                                              }
+ 488   5                                              if(getTimebuf[3]==0x1a){
+ 489   6                                                      getTimebuf[3]=0x20;
+C51 COMPILER V9.52.0.0   FIRST                                                             01/02/2017 15:07:14 PAGE 9   
+
+ 490   6                                              }
+ 491   5                                              if(getTimebuf[3]==0x0a){
+ 492   6                                                      getTimebuf[3]=0x10;
+ 493   6                                              }
+ 494   5                                              date[8]=(getTimebuf[3])/16+48;
+ 495   5                                              date[9]=(getTimebuf[3])%16+48;
+ 496   5                                              write_1602com(0x80+9);
+ 497   5                                              write_1602data(date[8]);
+ 498   5                                              write_1602com(0x80+10);
+ 499   5                                              write_1602data(date[9]);
+ 500   5                                              write_1602com(0x80+10);
+ 501   5                                              break;
+ 502   5                                      case 6:
+ 503   5                                              //在月的位置
+ 504   5                                              getTimebuf[4]++;
+ 505   5                                              if(getTimebuf[4]==0x13){
+ 506   6                                                      getTimebuf[4]=0x01;
+ 507   6                                              }
+ 508   5                                              if(getTimebuf[4]==0x0a){
+ 509   6                                                      getTimebuf[4]=0x10;
+ 510   6                                              }
+ 511   5                                              date[5]=(getTimebuf[4])/16+48;
+ 512   5                                              date[6]=(getTimebuf[4])%16+48;
+ 513   5                                              write_1602com(0x80+6);
+ 514   5                                              write_1602data(date[5]);
+ 515   5                                              write_1602com(0x80+7);
+ 516   5                                              write_1602data(date[6]);
+ 517   5                                              write_1602com(0x80+7);
+ 518   5                                              break;
+ 519   5                                      case 7:
+ 520   5                                              //在年的位置
+ 521   5                                              getTimebuf[6]++;
+ 522   5                                              if(getTimebuf[6]==0x9a){
+ 523   6                                                      getTimebuf[6]=0x00;
+ 524   6                                              }
+ 525   5                                              if(getTimebuf[6]==0x8a){
+ 526   6                                                      getTimebuf[6]=0x90;
+ 527   6                                              }
+ 528   5                                              if(getTimebuf[6]==0x7a){
+ 529   6                                                      getTimebuf[6]=0x80;
+ 530   6                                              }
+ 531   5                                              if(getTimebuf[6]==0x6a){
+ 532   6                                                      getTimebuf[6]=0x70;
+ 533   6                                              }
+ 534   5                                              if(getTimebuf[6]==0x5a){
+ 535   6                                                      getTimebuf[6]=0x60;
+ 536   6                                              }
+ 537   5                                              if(getTimebuf[6]==0x4a){
+ 538   6                                                      getTimebuf[6]=0x50;
+ 539   6                                              }
+ 540   5                                              if(getTimebuf[6]==0x3a){
+ 541   6                                                      getTimebuf[6]=0x40;
+ 542   6                                              }
+ 543   5                                              if(getTimebuf[6]==0x2a){
+ 544   6                                                      getTimebuf[6]=0x30;
+ 545   6                                              }
+ 546   5                                              if(getTimebuf[6]==0x1a){
+ 547   6                                                      getTimebuf[6]=0x20;
+ 548   6                                              }
+ 549   5                                              if(getTimebuf[6]==0x0a){
+ 550   6                                                      getTimebuf[6]=0x10;
+ 551   6                                              }
+C51 COMPILER V9.52.0.0   FIRST                                                             01/02/2017 15:07:14 PAGE 10  
+
+ 552   5                                              date[2]=(getTimebuf[6])/16+48;
+ 553   5                                              date[3]=(getTimebuf[6])%16+48;
+ 554   5                                              write_1602com(0x80+3);
+ 555   5                                              write_1602data(date[2]);
+ 556   5                                              write_1602com(0x80+4);
+ 557   5                                              write_1602data(date[3]);
+ 558   5                                              write_1602com(0x80+4);
+ 559   5                                              break;
+ 560   5                                      }
+ 561   4                              }
+ 562   3                              if(alarm!=0){
+ 563   4                                      switch(alarm){
+ 564   5                                              case 1:
+ 565   5                                                      //调节闹钟的开与关
+ 566   5                                                      if(isOpen==0){
+ 567   6                                                              isOpen=1;
+ 568   6                                                              write_1602com(0x80+0x40+13);
+ 569   6                                                              write_1602data(' ');
+ 570   6                                                              write_1602data('O');
+ 571   6                                                              write_1602data('N');
+ 572   6                                                      }else{
+ 573   6                                                              isOpen=0;
+ 574   6                                                              write_1602com(0x80+0x40+13);
+ 575   6                                                              write_1602data('O');
+ 576   6                                                              write_1602data('F');
+ 577   6                                                              write_1602data('F');
+ 578   6                                                      }
+ 579   5                                                      //防止写后地址自动向后加一  光标闪烁看不到
+ 580   5                                                      write_1602com(0x80+0x40+15);
+ 581   5                                                      break;
+ 582   5                                              case 2:
+ 583   5                                                      //调节闹钟的分
+ 584   5                                                      fen++;
+ 585   5                                                      if(fen==60){
+ 586   6                                                              fen=0;
+ 587   6                                                      }
+ 588   5                                                      display_alarm(0x80+0x40+8,fen);
+ 589   5                                                      break;
+ 590   5                                              case 3:
+ 591   5                                                      //调节闹钟的小时
+ 592   5                                                      shi++;
+ 593   5                                                      if(shi==24){
+ 594   6                                                              shi=0;
+ 595   6                                                      }
+ 596   5                                                      display_alarm(0x80+0x40+5,shi);
+ 597   5                                                      break;
+ 598   5                                      }
+ 599   4                              }
+ 600   3                      }
+ 601   2              }
+ 602   1              if(key_minus==0){//检测是否按下
+ 603   2                      delay(10);//消抖
+ 604   2                      if(key_minus==0){//再次检测是否按下
+ 605   3                              while(!key_minus);//检测是否松开
+ 606   3                              delay(10);//延时消抖
+ 607   3                              while(!key_minus);//再次检测是否松开
+ 608   3                              if(count!=0){
+ 609   4                                      switch(count){
+ 610   5                                      case 1:
+ 611   5                                              //在秒的位置
+ 612   5                                              getTimebuf[0]--;
+ 613   5                                              if(getTimebuf[0]==0xff){
+C51 COMPILER V9.52.0.0   FIRST                                                             01/02/2017 15:07:14 PAGE 11  
+
+ 614   6                                                      getTimebuf[0]=0x59;
+ 615   6                                              }
+ 616   5                                              if(getTimebuf[0]==0x4f){
+ 617   6                                                      getTimebuf[0]=0x49;
+ 618   6                                              }
+ 619   5                                              if(getTimebuf[0]==0x3f){
+ 620   6                                                      getTimebuf[0]=0x39;
+ 621   6                                              }
+ 622   5                                              if(getTimebuf[0]==0x2f){
+ 623   6                                                      getTimebuf[0]=0x29;
+ 624   6                                              }
+ 625   5                                              if(getTimebuf[0]==0x1f){
+ 626   6                                                      getTimebuf[0]=0x19;
+ 627   6                                              }
+ 628   5                                              if(getTimebuf[0]==0x0f){
+ 629   6                                                      getTimebuf[0]=0x09;
+ 630   6                                              }
+ 631   5                                              time[6]=(getTimebuf[0])/16+48;//格式化时间秒
+ 632   5                                              time[7]=(getTimebuf[0])%16+48;
+ 633   5                                              write_1602com(0x80+0x40+6);//在秒的位置
+ 634   5                                              write_1602data(time[6]);
+ 635   5                                              write_1602com(0x80+0x40+7);//在秒的位置
+ 636   5                                              write_1602data(time[7]);
+ 637   5                                              write_1602com(0x80+0x40+7);//让光标在秒的位置闪烁
+ 638   5                                              break;
+ 639   5                                      case 2:
+ 640   5                                              //在分的位置
+ 641   5                                              getTimebuf[1]--;
+ 642   5                                              if(getTimebuf[1]==0xff){
+ 643   6                                                      getTimebuf[1]=0x59;
+ 644   6                                              }
+ 645   5                                              if(getTimebuf[1]==0x4f){
+ 646   6                                                      getTimebuf[1]=0x49;
+ 647   6                                              }
+ 648   5                                              if(getTimebuf[1]==0x3f){
+ 649   6                                                      getTimebuf[1]=0x39;
+ 650   6                                              }
+ 651   5                                              if(getTimebuf[1]==0x2f){
+ 652   6                                                      getTimebuf[1]=0x29;
+ 653   6                                              }
+ 654   5                                              if(getTimebuf[1]==0x1f){
+ 655   6                                                      getTimebuf[1]=0x19;
+ 656   6                                              }
+ 657   5                                              if(getTimebuf[1]==0x0f){
+ 658   6                                                      getTimebuf[1]=0x09;
+ 659   6                                              }
+ 660   5                                              time[3]=(getTimebuf[1])/16+48;//格式化时间分
+ 661   5                                              time[4]=(getTimebuf[1])%16+48;
+ 662   5                                              write_1602com(0x80+0x40+3);//在分的位置
+ 663   5                                              write_1602data(time[3]);
+ 664   5                                              write_1602com(0x80+0x40+4);//在分的位置
+ 665   5                                              write_1602data(time[4]);
+ 666   5                                              write_1602com(0x80+0x40+4);//让光标在分的位置闪烁
+ 667   5                                              break;
+ 668   5                                      case 3:
+ 669   5                                              //在时的位置
+ 670   5                                              getTimebuf[2]--;
+ 671   5                                              if(getTimebuf[2]==0xff){
+ 672   6                                                      getTimebuf[2]=0x23;
+ 673   6                                              }
+ 674   5                                              if(getTimebuf[2]==0x1f){
+ 675   6                                                      getTimebuf[2]=0x19;
+C51 COMPILER V9.52.0.0   FIRST                                                             01/02/2017 15:07:14 PAGE 12  
+
+ 676   6                                              }
+ 677   5                                              if(getTimebuf[2]==0x0f){
+ 678   6                                                      getTimebuf[2]=0x09;
+ 679   6                                              }
+ 680   5                                              time[0]=(getTimebuf[2])/16+48;//格式化时间小时
+ 681   5                                              time[1]=(getTimebuf[2])%16+48;
+ 682   5                                              write_1602com(0x80+0x40+0);//在小时的位置
+ 683   5                                              write_1602data(time[0]);
+ 684   5                                              write_1602com(0x80+0x40+1);
+ 685   5                                              write_1602data(time[1]);
+ 686   5                                              write_1602com(0x80+0x40+1);
+ 687   5                                              break;
+ 688   5                                      case 4:
+ 689   5                                              //在星期的位置
+ 690   5                                              getTimebuf[5]--;
+ 691   5                                              if(getTimebuf[5]==0){
+ 692   6                                                      getTimebuf[5]=0x07;
+ 693   6                                              }
+ 694   5                                              if((getTimebuf[5]%10)*3==21){//轮完了  重新开始
+ 695   6                                                      week[0]=weeklist[0];
+ 696   6                                                      week[1]=weeklist[1];
+ 697   6                                                      week[2]=weeklist[2];
+ 698   6                                              }else{
+ 699   6                                                      week[0]=weeklist[(getTimebuf[5]%10)*3];//格式化星期
+ 700   6                                                      week[1]=weeklist[(getTimebuf[5]%10)*3+1];
+ 701   6                                                      week[2]=weeklist[(getTimebuf[5]%10)*3+2];
+ 702   6                                              }
+ 703   5                                              write_1602com(0x80+12);
+ 704   5                                              write_1602data(week[0]);
+ 705   5                                              write_1602com(0x80+13);
+ 706   5                                              write_1602data(week[1]);
+ 707   5                                              write_1602com(0x80+14);
+ 708   5                                              write_1602data(week[2]);
+ 709   5                                              write_1602com(0x80+14);
+ 710   5                                              break;
+ 711   5                                      case 5:
+ 712   5                                              //在日的位置
+ 713   5                                              getTimebuf[3]--;
+ 714   5                                              if(getTimebuf[3]==0){
+ 715   6                                                      getTimebuf[3]=0x31;
+ 716   6                                              }
+ 717   5                                              if(getTimebuf[3]==0x2f){
+ 718   6                                                      getTimebuf[3]=0x29;
+ 719   6                                              }
+ 720   5                                              if(getTimebuf[3]==0x1f){
+ 721   6                                                      getTimebuf[3]=0x19;
+ 722   6                                              }
+ 723   5                                              if(getTimebuf[3]==0x0f){
+ 724   6                                                      getTimebuf[3]=0x09;
+ 725   6                                              }
+ 726   5                                              date[8]=(getTimebuf[3])/16+48;
+ 727   5                                              date[9]=(getTimebuf[3])%16+48;
+ 728   5                                              write_1602com(0x80+9);
+ 729   5                                              write_1602data(date[8]);
+ 730   5                                              write_1602com(0x80+10);
+ 731   5                                              write_1602data(date[9]);
+ 732   5                                              write_1602com(0x80+10);
+ 733   5                                              break;
+ 734   5                                      case 6:
+ 735   5                                              //在月的位置
+ 736   5                                              getTimebuf[4]--;
+ 737   5                                              if(getTimebuf[4]==0){
+C51 COMPILER V9.52.0.0   FIRST                                                             01/02/2017 15:07:14 PAGE 13  
+
+ 738   6                                                      getTimebuf[4]=0x12;
+ 739   6                                              }
+ 740   5                                              if(getTimebuf[4]==0x0f){
+ 741   6                                                      getTimebuf[4]=0x09;
+ 742   6                                              }
+ 743   5                                              date[5]=(getTimebuf[4])/16+48;
+ 744   5                                              date[6]=(getTimebuf[4])%16+48;
+ 745   5                                              write_1602com(0x80+6);
+ 746   5                                              write_1602data(date[5]);
+ 747   5                                              write_1602com(0x80+7);
+ 748   5                                              write_1602data(date[6]);
+ 749   5                                              write_1602com(0x80+7);
+ 750   5                                              break;
+ 751   5                                      case 7:
+ 752   5                                              //在年的位置
+ 753   5                                              getTimebuf[6]--;
+ 754   5                                              if(getTimebuf[6]==0xff){
+ 755   6                                                      getTimebuf[6]=0x99;
+ 756   6                                              }
+ 757   5                                              if(getTimebuf[6]==0x8f){
+ 758   6                                                      getTimebuf[6]=0x89;
+ 759   6                                              }
+ 760   5                                              if(getTimebuf[6]==0x7f){
+ 761   6                                                      getTimebuf[6]=0x79;
+ 762   6                                              }
+ 763   5                                              if(getTimebuf[6]==0x6f){
+ 764   6                                                      getTimebuf[6]=0x69;
+ 765   6                                              }
+ 766   5                                              if(getTimebuf[6]==0x5f){
+ 767   6                                                      getTimebuf[6]=0x59;
+ 768   6                                              }
+ 769   5                                              if(getTimebuf[6]==0x4f){
+ 770   6                                                      getTimebuf[6]=0x49;
+ 771   6                                              }
+ 772   5                                              if(getTimebuf[6]==0x3f){
+ 773   6                                                      getTimebuf[6]=0x39;
+ 774   6                                              }
+ 775   5                                              if(getTimebuf[6]==0x2f){
+ 776   6                                                      getTimebuf[6]=0x29;
+ 777   6                                              }
+ 778   5                                              if(getTimebuf[6]==0x1f){
+ 779   6                                                      getTimebuf[6]=0x19;
+ 780   6                                              }
+ 781   5                                              if(getTimebuf[6]==0x0f){
+ 782   6                                                      getTimebuf[6]=0x09;
+ 783   6                                              }
+ 784   5                                              date[2]=(getTimebuf[6])/16+48;
+ 785   5                                              date[3]=(getTimebuf[6])%16+48;
+ 786   5                                              write_1602com(0x80+3);
+ 787   5                                              write_1602data(date[2]);
+ 788   5                                              write_1602com(0x80+4);
+ 789   5                                              write_1602data(date[3]);
+ 790   5                                              write_1602com(0x80+4);
+ 791   5                                              break;
+ 792   5                                      }
+ 793   4                              }
+ 794   3                              if(alarm!=0){
+ 795   4                                      switch(alarm){
+ 796   5                                              case 1:
+ 797   5                                                      //调节闹钟的开与关
+ 798   5                                                      if(isOpen==0){
+ 799   6                                                              isOpen=1;
+C51 COMPILER V9.52.0.0   FIRST                                                             01/02/2017 15:07:14 PAGE 14  
+
+ 800   6                                                              write_1602com(0x80+0x40+13);
+ 801   6                                                              write_1602data(' ');
+ 802   6                                                              write_1602data('O');
+ 803   6                                                              write_1602data('N');
+ 804   6                                                      }else{
+ 805   6                                                              isOpen=0;
+ 806   6                                                              write_1602com(0x80+0x40+13);
+ 807   6                                                              write_1602data('O');
+ 808   6                                                              write_1602data('F');
+ 809   6                                                              write_1602data('F');
+ 810   6                                                      }
+ 811   5                                                      //防止写后地址自动向后加一  光标闪烁看不到
+ 812   5                                                      write_1602com(0x80+0x40+15);
+ 813   5                                                      break;
+ 814   5                                              case 2:
+ 815   5                                                      //调节闹钟的分
+ 816   5                                                      fen--;
+ 817   5                                                      if(fen<0){
+ 818   6                                                              fen=59;
+ 819   6                                                      }
+ 820   5                                                      display_alarm(0x80+0x40+8,fen);
+ 821   5                                                      break;
+ 822   5                                              case 3:
+ 823   5                                                      //调节闹钟的小时
+ 824   5                                                      shi--;
+ 825   5                                                      if(shi<0){
+ 826   6                                                              shi=23;
+ 827   6                                                      }
+ 828   5                                                      display_alarm(0x80+0x40+5,shi);
+ 829   5                                                      break;
+ 830   5                                      }
+ 831   4                              }
+ 832   3                      }
+ 833   2              }
+ 834   1              if(key_set_alarm==0){//检测是否按下
+ 835   2                      delay(10);//消抖
+ 836   2                      if(key_set_alarm==0){//再次检测是否按下
+ 837   3                              while(!key_set_alarm);//检测是否松开
+ 838   3                              delay(10);//延时消抖
+ 839   3                              while(!key_set_alarm);//再次检测是否松开
+ 840   3                              if(count==0){//时间在正常走动的时候才能设置闹钟
+ 841   4                                      init_alarm();
+ 842   4                                      alarm++;//说明进入闹钟设置界面
+ 843   4                                      if(alarm==4){
+ 844   5                                              alarm=0;//说明闹钟设置完毕
+ 845   5                                              write_1602com(0x01);//清屏以便显示时间
+ 846   5                                              write_1602com(0x0c);//关闭光标
+ 847   5                                              //显示设置成功或取消的提示
+ 848   5                                              if(isOpen){
+ 849   6                                                      write_1602com(0x80+2);
+ 850   6                                                      for(i=0;i<11;i++){
+ 851   7                                                              write_1602data(tips1[i]);
+ 852   7                                                      }
+ 853   6                                              }else{
+ 854   6                                                      write_1602com(0x80+1);
+ 855   6                                                      for(i=0;i<14;i++){
+ 856   7                                                              write_1602data(tips2[i]);
+ 857   7                                                      }
+ 858   6                                              }
+ 859   5                                              //延时2ms后清屏显示时间
+ 860   5                                              delay(2000);
+ 861   5                                              write_1602com(0x01);
+C51 COMPILER V9.52.0.0   FIRST                                                             01/02/2017 15:07:14 PAGE 15  
+
+ 862   5                                      }else{
+ 863   5                                              switch(alarm){
+ 864   6                                                      case 1:
+ 865   6                                                              write_1602com(0x80+0x40+15);
+ 866   6                                                              break;
+ 867   6                                                      case 2:
+ 868   6                                                              write_1602com(0x80+0x40+9);
+ 869   6                                                              break;
+ 870   6                                                      case 3:
+ 871   6                                                              write_1602com(0x80+0x40+6);
+ 872   6                                                              break;
+ 873   6                                              }
+ 874   5                                              write_1602com(0x0f);
+ 875   5                                      }
+ 876   4                              }
+ 877   3                      }
+ 878   2              }
+ 879   1      }
+ 880          void beep(){
+ 881   1              //检测闹钟  并且报警
+ 882   1              if(time[0]==int_to_char(shi/10)&&time[1]==int_to_char(shi%10)&&time[3]==int_to_char(fen/10)&&time[4]==int
+             -_to_char(fen%10)){
+ 883   2                      isRing=1;//闹钟响起，此时如果进入闹钟设置界面 改变时分，闹钟就关闭了
+ 884   2                      bee=0;
+ 885   2                      delay(250);
+ 886   2                      bee=1;
+ 887   2                      delay(250);
+ 888   2              }else{
+ 889   2                      isRing=0;//关闭闹钟或者一分钟后闹钟自动关闭
+ 890   2                      bee=1;
+ 891   2              }
+ 892   1      }
+ 893          void delay1(int i){
+ 894   1              while(i--);
+ 895   1      }
+ 896          void ds18b20_init(){
+ 897   1              uchar x=0;
+ 898   1              dq = 1;    //DQ复位
+ 899   1              delay1(80);  //稍做延时
+ 900   1              dq = 0;    //单片机将DQ拉低
+ 901   1              delay1(800); //精确延时 大于 480us
+ 902   1              dq = 1;    //拉高总线
+ 903   1              delay1(140);
+ 904   1              x=dq;      //稍做延时后 如果x=0则初始化成功 x=1则初始化失败
+ 905   1              delay1(200);
+ 906   1      }
+ 907          uchar ds18b20_read(){
+ 908   1              //读一个字节
+ 909   1              uchar i=0;
+ 910   1              uchar dat = 0;
+ 911   1              for (i=8;i>0;i--)
+ 912   1              {
+ 913   2                      dq = 0; // 给脉冲信号
+ 914   2                      dat>>=1;
+ 915   2                      dq = 1; // 给脉冲信号
+ 916   2                      if(dq)
+ 917   2                              dat|=0x80;
+ 918   2                      delay1(40);
+ 919   2              }
+ 920   1              return(dat);
+ 921   1      }
+ 922          void ds18b20_write(char dat){
+C51 COMPILER V9.52.0.0   FIRST                                                             01/02/2017 15:07:14 PAGE 16  
+
+ 923   1              //写一个字节
+ 924   1              uchar i=0;
+ 925   1              for (i=8; i>0; i--)
+ 926   1              {
+ 927   2                      dq = 0;
+ 928   2                      dq = dat&0x01;
+ 929   2                      delay1(50);
+ 930   2                      dq = 1;
+ 931   2                      dat>>=1;
+ 932   2              }
+ 933   1      }
+ 934          int ds18b20_read_temp(){
+ 935   1              //读取温度
+ 936   1              uchar low;
+ 937   1              uchar high;
+ 938   1              unsigned long tmp;
+ 939   1              float value;
+ 940   1              int t;//温度
+ 941   1              ds18b20_init();
+ 942   1              ds18b20_write(0xCC); //跳过读序列号的操作
+ 943   1              ds18b20_write(0x44); //启动温度转换
+ 944   1              ds18b20_init();
+ 945   1              ds18b20_write(0xCC); //跳过读序列号的操作
+ 946   1              ds18b20_write(0xBE); //读取温度寄存器  共九个  前两个代表温度
+ 947   1              low=ds18b20_read();//低八位数据
+ 948   1              high=ds18b20_read();//高八位数据
+ 949   1      
+ 950   1              tmp=high;
+ 951   1              tmp<<=8;
+ 952   1              tmp=tmp|low;
+ 953   1              //此处有正负之分
+ 954   1              if(tmp>=63488){//ffff f000 0000 0000-->(f800)
+ 955   2                      temp_flag=0;
+ 956   2                      //8位全为1时，加1才进位
+ 957   2                      if((~low)==0xff){//判断low取反加1之后是否进位
+ 958   3                              high=(~high)+1;
+ 959   3                              low=0;
+ 960   3                      }else{
+ 961   3                              high=~high;
+ 962   3                              low=(~low)+1;
+ 963   3                      }
+ 964   2                      tmp=high*256+low;
+ 965   2              }else{
+ 966   2                      temp_flag=1;
+ 967   2              }
+ 968   1              value=tmp*0.0625;
+ 969   1              t=value*10+((temp_flag==1)?+0.5:-0.5);//放大十倍输出并四舍五入
+ 970   1              return t;
+ 971   1      }
+ 972          void main()
+ 973          {
+ 974   1              init_1602();
+ 975   1              init_ds1302();
+ 976   1              UartInit();
+ 977   1              LED1 = 0;
+ 978   1              LED2 = 0;
+ 979   1              LED3 = 0;
+ 980   1              while(1)
+ 981   1              {
+ 982   2                      if(isOpen)
+ 983   2                      {//只有开启闹钟的时候才检测
+ 984   3                              beep();//不断检测闹钟
+C51 COMPILER V9.52.0.0   FIRST                                                             01/02/2017 15:07:14 PAGE 17  
+
+ 985   3                      }
+ 986   2                      key_scan();
+ 987   2                      if(count==0&&alarm==0)
+ 988   2                      {//没有设定时间  也没有在闹钟界面的时候时间才显示
+ 989   3                              display();
+ 990   3                      }
+ 991   2                      
+ 992   2                      if(flag==1)
+ 993   2                      {
+ 994   3                              flag = 0;
+ 995   3                              if((Recv_buf[2]==0x30)&&(Recv_buf[4]==0x32))
+ 996   3                              {
+ 997   4                                      relay1 = 1;
+ 998   4                              }
+ 999   3                              if((Recv_buf[2]==0x31)&&(Recv_buf[4]==0x32))
+1000   3                              {
+1001   4                                      relay1 = 0;
+1002   4                              }       
+1003   3                              if((Recv_buf[2]==0x30)&&(Recv_buf[4]==0x33))
+1004   3                              {
+1005   4                                      relay2 = 1;
+1006   4                              }
+1007   3                              if((Recv_buf[2]==0x31)&&(Recv_buf[4]==0x33))
+1008   3                              {
+1009   4                                      relay2 = 0;
+1010   4                              }
+1011   3                              if((Recv_buf[2]==0x30)&&(Recv_buf[4]==0x34))
+1012   3                              {
+1013   4                                      relay3 = 1;
+1014   4                              }
+1015   3                              if((Recv_buf[2]==0x31)&&(Recv_buf[4]==0x34))
+1016   3                              {
+1017   4                                      relay3 = 0;
+1018   4                              }
+1019   3                              if((Recv_buf[2]==0x30)&&(Recv_buf[4]==0x35))
+1020   3                              {
+1021   4                                      relay4 = 1;
+1022   4                              }
+1023   3                              if((Recv_buf[2]==0x31)&&(Recv_buf[4]==0x35))
+1024   3                              {
+1025   4                                      relay4 = 0;
+1026   4                              }
+1027   3                              if((Recv_buf[2]==0x30)&&(Recv_buf[4]==0x36))
+1028   3                              {
+1029   4                                      LED1 = 0;
+1030   4                              }
+1031   3                              if((Recv_buf[2]==0x31)&&(Recv_buf[4]==0x36))
+1032   3                              {
+1033   4                                      LED1 = 1;
+1034   4                              }                       
+1035   3                              if((Recv_buf[2]==0x30)&&(Recv_buf[4]==0x37))
+1036   3                              {
+1037   4                                      LED2 = 0;
+1038   4                              }
+1039   3                              if((Recv_buf[2]==0x31)&&(Recv_buf[4]==0x37))
+1040   3                              {
+1041   4                                      LED2 = 1;
+1042   4                              }
+1043   3                              if((Recv_buf[2]==0x30)&&(Recv_buf[4]==0x38))
+1044   3                              {
+1045   4                                      LED3 = 0;
+1046   4                              }
+C51 COMPILER V9.52.0.0   FIRST                                                             01/02/2017 15:07:14 PAGE 18  
+
+1047   3                              if((Recv_buf[2]==0x31)&&(Recv_buf[4]==0x38))
+1048   3                              {
+1049   4                                      LED3 = 1;
+1050   4                              }
+1051   3                              
+1052   3                      }
+1053   2              }
+1054   1      }
+1055          
+1056          
+1057          /************串行口1中断处理函数*************/
+1058          void UART_1Interrupt () interrupt 4
+1059          {
+1060   1              uchar i;
+1061   1              if(RI == 1) 
+1062   1              {  //如果收到.  0
+1063   2                      
+1064   2                      RI = 0;      //清除标志.   
+1065   2                      Recv_buf[i] = SBUF;  //接收. 
+1066   2                      i++;
+1067   2                      if((Recv_buf[i-6]==0x53)&&(Recv_buf[i-7]==0x55))/*判断一帧数据的两位帧头*/
+1068   2                      {
+1069   3                              i=0;
+1070   3                              flag=1;
+1071   3                      }
+1072   2              }  
+1073   1      }
+1074          
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   3894    ----
+   CONSTANT SIZE    =     37    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =     94      25
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

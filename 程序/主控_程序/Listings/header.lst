@@ -1,0 +1,27 @@
+C51 COMPILER V9.52.0.0   HEADER                                                            12/28/2016 22:26:26 PAGE 1   
+
+
+C51 COMPILER V9.52.0.0, COMPILATION OF MODULE HEADER
+OBJECT MODULE PLACED IN .\Objects\header.obj
+COMPILER INVOKED BY: C:\Keil_v5\C51\BIN\C51.EXE header.c BROWSE DEBUG OBJECTEXTEND PRINT(.\Listings\header.lst) OBJECT(.
+                    -\Objects\header.obj)
+
+line level    source
+
+   1          #include"header.h"
+   2          
+   3          
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   ----    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)
